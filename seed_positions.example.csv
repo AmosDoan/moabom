@@ -1,0 +1,5 @@
+account,name,ticker,market,currency,shares,avg_cost,manual_value_krw
+연금저축,삼성전자,005930,KRX,KRW,100,70000,
+ISA,TIGER 미국S&P500,360750,KRX,KRW,50,18000,
+일반,Apple,AAPL,US,USD,10,180.5,
+일반,금 현물,,MANUAL,KRW,,,5000000

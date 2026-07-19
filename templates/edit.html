@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ '종목 수정' if pid else '종목 추가' }}{% endblock %}
+{% block body %}
+<div class="card">
+  <div class="acc-head"><span class="n">{{ '종목 수정' if pid else '종목 추가' }}</span></div>
+  <form method="post" action="{{ ('/positions/' ~ pid) if pid else '/positions' }}">
+    <div class="grid2">
+      <div>
+        <label>계좌</label>
+        <input name="account" value="{{ p.account or '' }}" placeholder="종합매매 / ISA / 연금저축 / 금현물" required>
+      </div>
+      <div>
+        <label>종목명</label>
+        <input name="name" value="{{ p.name or '' }}" required>
+      </div>
+      <div>
+        <label>티커 / 국내코드 <span class="muted">(MANUAL이면 비움)</span></label>
+        <input name="ticker" value="{{ p.ticker or '' }}" placeholder="SKHY 또는 005930">
+      </div>
+      <div>
+        <label>구분</label>
+        <select name="market">
+          {% for m in ['US','KR','MANUAL'] %}
+          <option value="{{ m }}" {{ 'selected' if p.market == m else '' }}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>통화</label>
+        <select name="currency">
+          {% for c in ['USD','KRW'] %}
+          <option value="{{ c }}" {{ 'selected' if p.currency == c else '' }}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>보유수량</label>
+        <input name="shares" value="{{ p.shares if p.shares is not none else '' }}" placeholder="14">
+      </div>
+      <div>
+        <label>평단가 <span class="muted">(통화 기준)</span></label>
+        <input name="avg_cost" value="{{ p.avg_cost if p.avg_cost is not none else '' }}" placeholder="173.05">
+      </div>
+      <div>
+        <label>수동 평가액(원) <span class="muted">(MANUAL/폴백용)</span></label>
+        <input name="manual_value_krw" value="{{ p.manual_value_krw if p.manual_value_krw is not none else '' }}">
+      </div>
+    </div>
+    <p class="muted" style="margin-top:14px;">
+      구분 US는 야후 티커(SKHY), KR은 6자리 코드(005930)로 실시간 조회합니다.
+      금·현금처럼 조회가 안 되는 항목은 MANUAL로 두고 수동 평가액만 적어 주세요.
+    </p>
+    <div style="margin-top:12px; display:flex; gap:10px;">
+      <button class="btn primary" type="submit">저장</button>
+      <a class="btn" href="/positions">취소</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

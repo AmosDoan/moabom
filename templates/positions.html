@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}종목 관리{% endblock %}
+{% block body %}
+<div class="card">
+  <div class="acc-head">
+    <span class="n">보유종목</span>
+    <a class="btn primary" href="/positions/new">+ 종목 추가</a>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>계좌</th><th>종목</th><th>티커</th><th>구분</th><th>수량</th><th>평단</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.account }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.ticker or '-' }}</td>
+          <td>{{ r.market }}</td>
+          <td>{{ r.shares if r.shares is not none else '-' }}</td>
+          <td>{{ r.avg_cost if r.avg_cost is not none else '-' }}</td>
+          <td>
+            <a class="btn" href="/positions/{{ r.id }}/edit">수정</a>
+            <form class="inline" method="post" action="/positions/{{ r.id }}/delete"
+                  onsubmit="return confirm('삭제할까요?');">
+              <button class="btn" type="submit">삭제</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

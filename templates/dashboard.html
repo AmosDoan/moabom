@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block body %}
+{% set won = "{:,.0f}".format %}
+{% if nonstock %}
+<div class="card">
+  <div class="kpi">
+    <div class="label">총 순자산 (주식 + 비주식)</div>
+    <div class="value" style="font-size:28px;">{{ won(net_worth) }}원</div>
+  </div>
+</div>
+{% endif %}
+<div class="card">
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">{{ '주식·금·현금 평가액' if nonstock else '총 평가액' }}</div>
+      <div class="value">{{ won(d.total_krw) }}원</div>
+    </div>
+    <div class="kpi">
+      <div class="label">총 손익</div>
+      <div class="value {{ 'up' if d.total_pl_krw >= 0 else 'down' }}">
+        {{ '+' if d.total_pl_krw >= 0 else '' }}{{ won(d.total_pl_krw) }}원
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="label">환율 (USD/KRW)</div>
+      <div class="value">{{ "{:,.1f}".format(d.fx) }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="muted" style="margin-bottom:10px;">비중 상위</div>
+  {% for r in top %}
+  <div class="acc-head"><span class="n">{{ r.name }}</span><span class="v">{{ won(r.mkt_krw) }}원 · {{ r.weight }}%</span></div>
+  <div class="bar"><span style="width:{{ r.weight }}%"></span></div>
+  {% endfor %}
+</div>
+
+{% for a in d.accounts %}
+<div class="card">
+  <div class="acc-head">
+    <span class="n">{{ a.account }}</span>
+    <span class="v">{{ won(a.mkt_krw) }}원 · {{ a.weight }}% ·
+      <span class="{{ 'up' if a.pl_krw >= 0 else 'down' }}">{{ '+' if a.pl_krw >= 0 else '' }}{{ won(a.pl_krw) }}원</span>
+    </span>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>종목</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
+      <tbody>
+      {% for r in a.rows %}
+        <tr>
+          <td>{{ r.name }}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</td>
+          <td>{{ won(r.mkt_krw) }}</td>
+          <td class="{{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">
+            {{ ('+' if r.pl_krw >= 0 else '') ~ won(r.pl_krw) if r.pl_krw is not none else '-' }}
+          </td>
+          <td class="{{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">
+            {{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}
+          </td>
+          <td>{{ r.weight }}%</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% if nonstock %}
+<div class="card">
+  <div class="acc-head">
+    <span class="n">비주식 자산
+      <a class="muted" href="https://docs.google.com/spreadsheets/d/1nmtCUNBi62qzROUYhhDu8lhixucxPyK3jdhN8YISnhg/edit"
+         target="_blank" rel="noopener">구글 시트 열기 ↗</a>
+    </span>
+    <span class="v">{{ won(nonstock.total_krw) }}원</span>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>항목</th><th>평가액(원)</th></tr></thead>
+      <tbody>
+      {% for i in nonstock.assets %}
+        <tr><td>{{ i.name }}</td><td>{{ won(i.krw) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:8px;">금·달러는 위 계좌(금현물·USD현금)와 중복이라 제외했습니다. 시트 값은 15분 캐시.</p>
+</div>
+{% endif %}
+
+<p class="muted">시세는 최대 10분 캐시됩니다. 매매 후에는 <a href="/positions">종목 관리</a>에서 수량·평단을 수정해 주세요.</p>
+{% endblock %}

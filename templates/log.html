@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}변경 로그{% endblock %}
+{% block body %}
+<div class="card">
+  <div class="acc-head"><span class="n">변경 로그 <span class="muted">(최근 200건)</span></span></div>
+  {% if logs %}
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>시각</th><th>작업</th><th>계좌</th><th>종목</th><th>내용</th></tr></thead>
+      <tbody>
+      {% for l in logs %}
+        <tr>
+          <td class="muted">{{ l.ts }}</td>
+          <td>{{ l.action }}</td>
+          <td>{{ l.account }}</td>
+          <td>{{ l.name }}</td>
+          <td style="text-align:left; white-space:normal;">{{ l.detail }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="muted">아직 변경 이력이 없습니다. 종목 관리에서 추가·수정·삭제하면 여기에 기록됩니다.</p>
+  {% endif %}
+</div>
+{% endblock %}

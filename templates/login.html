@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+<title>로그인 · 자산 대시보드</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c1f23; --muted:#6b7280; --line:#e5e7eb; --accent:#111827; --err:#d92d20; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1216; --card:#171b21; --ink:#e7e9ec; --muted:#9aa3af; --line:#262c34; --accent:#e7e9ec; --err:#ff6b5e; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); padding:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+          padding:28px 24px; width:100%; max-width:360px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:20px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:12px 0 5px; }
+  input { width:100%; padding:11px; border:1px solid var(--line); border-radius:9px;
+          background:var(--bg); color:var(--ink); font-size:15px; }
+  button { width:100%; margin-top:20px; padding:12px; border:none; border-radius:9px;
+           background:var(--accent); color:var(--bg); font-size:15px; font-weight:600; cursor:pointer; }
+  .err { color:var(--err); font-size:13px; margin-top:14px; }
+</style>
+</head>
+<body>
+  <form class="card" method="post" action="/login">
+    <h1>💰 자산 대시보드</h1>
+    <div class="sub">로그인이 필요합니다.</div>
+    <label for="username">아이디</label>
+    <input id="username" name="username" autocomplete="username" autofocus required>
+    <label for="password">비밀번호</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit">로그인</button>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  </form>
+</body>
+</html>

@@ -1,0 +1,15 @@
+services:
+  asset:
+    build: .
+    container_name: asset-dashboard
+    restart: unless-stopped
+    ports:
+      - "8842:8000"          # host 8842 -> reverse proxy target
+    volumes:
+      - ./data:/srv/data      # SQLite persists here (pre-create on NAS!)
+    environment:
+      - ASSET_USER=${ASSET_USER:?set ASSET_USER}
+      - ASSET_PASSWORD=${ASSET_PASSWORD:?set ASSET_PASSWORD}
+      - ASSET_SHEET_ID=${ASSET_SHEET_ID:-}
+      - GOOGLE_SA_KEY=/srv/data/gsa.json
+      - TZ=Asia/Seoul

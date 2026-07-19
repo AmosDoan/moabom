@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+# Secrets
+.env
+data/gsa.json
+
+# Runtime data: SQLite holdings DB, login log
+data/
+*.db
+*.sqlite3
+
+# Real holdings. Use seed_positions.example.csv as the template.
+seed_positions.csv
+
+.DS_Store
