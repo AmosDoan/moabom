@@ -155,10 +155,12 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     data = prices.enrich(db.all_positions())
     top = sorted(data["rows"], key=lambda r: r["mkt_krw"], reverse=True)[:8]
     nonstock = sheets.get_nonstock()  # None until Google 시트 연동됨
+    banks = sheets.get_banks()
     net_worth = data["total_krw"] + (nonstock["total_krw"] if nonstock else 0)
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "d": data, "top": top, "nonstock": nonstock, "net_worth": net_worth},
+        {"request": request, "d": data, "top": top, "nonstock": nonstock,
+         "banks": banks, "net_worth": net_worth},
     )
 
 

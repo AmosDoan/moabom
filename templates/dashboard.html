@@ -90,5 +90,29 @@
 </div>
 {% endif %}
 
+{% if banks %}
+<div class="card">
+  <div class="acc-head">
+    <span class="n">은행 예적금 상세</span>
+    <span class="v">{{ won(banks | sum(attribute='krw')) }}원</span>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>은행</th><th>금액(원)</th><th>만기일</th><th>금리</th></tr></thead>
+      <tbody>
+      {% for b in banks %}
+        <tr>
+          <td>{{ b.name }}</td>
+          <td>{{ won(b.krw) }}</td>
+          <td class="muted">{{ b.maturity or '-' }}</td>
+          <td class="muted">{{ b.rate or '-' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <p class="muted">시세는 최대 10분 캐시됩니다. 매매 후에는 <a href="/positions">종목 관리</a>에서 수량·평단을 수정해 주세요.</p>
 {% endblock %}

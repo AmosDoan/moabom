@@ -40,8 +40,59 @@ def _read_raw() -> list[list[str]]:
     return ws.get_all_values()
 
 
+def _raw_cached() -> list[list[str]] | None:
+    """Cached sheet read shared by get_nonstock/get_banks (avoids double API calls)."""
+    now = time.time()
+    hit = _CACHE.get("raw")
+    if hit and now - hit[0] < _TTL:
+        return hit[1]
+    try:
+        rows = _read_raw()
+    except Exception:
+        return None
+    _CACHE["raw"] = (now, rows)
+    return rows
+
+
+def _num_cell(s: str):
+    s = (s or "").strip().replace(",", "")
+    if s in ("", "-"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def get_banks() -> list[dict] | None:
+    """Itemized bank deposits from the sheet's top block (rows before '은행 총액').
+    Returns [{name, krw, maturity, rate}] for non-zero balances, or None."""
+    if not available():
+        return None
+    rows = _raw_cached()
+    if rows is None:
+        return None
+    banks = []
+    for row in rows:
+        label = (row[0] if row else "").strip().strip("\x08").strip()
+        if label == "은행 총액":
+            break
+        if not label or label in ("만기일", "금리"):
+            continue
+        amt = _num_cell(row[1]) if len(row) > 1 else None
+        if not amt:  # skip empty / zero balances
+            continue
+        maturity = (row[2].strip() if len(row) > 2 else "")
+        rate = (row[3].strip() if len(row) > 3 else "")
+        # 카카오(달러) 등: col2 이 만기일이 아니라 숫자면 만기 표기 비움
+        if maturity and not any(c in maturity for c in ".-/"):
+            maturity = ""
+        banks.append({"name": label, "krw": round(amt * 10000), "maturity": maturity, "rate": rate})
+    return banks or None
+
+
 def get_nonstock() -> dict | None:
-    """Return {'items':[{name,krw}], 'total_krw':int} or None if not configured."""
+    """Return {'assets':[{name,krw}], 'total_krw':int} or None if not configured."""
     if not available():
         return None
 
@@ -50,9 +101,8 @@ def get_nonstock() -> dict | None:
     if hit and now - hit[0] < _TTL:
         return hit[1]
 
-    try:
-        rows = _read_raw()
-    except Exception:
+    rows = _raw_cached()
+    if rows is None:
         return None
 
     found: dict[str, float] = {}
