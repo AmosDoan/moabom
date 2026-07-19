@@ -164,13 +164,16 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         if str(r.get("market") or "").upper() in ("US", "KR", "JP") and r.get("ticker")
     )
     deposit_krw = sum(b["krw"] for b in banks) if banks else 0
+    car_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "자동차")
+    financial_krw = net_worth - car_krw  # 차 제외 금융자산
     pct = lambda v: round(v / net_worth * 100, 1) if net_worth else 0
-    weights = {"stock_pct": pct(stock_krw), "deposit_pct": pct(deposit_krw)}
+    weights = {"stock_pct": pct(stock_krw), "deposit_pct": pct(deposit_krw), "car_pct": pct(car_krw)}
 
     return templates.TemplateResponse(
         "dashboard.html",
         {"request": request, "d": data, "top": top, "nonstock": nonstock,
-         "banks": banks, "net_worth": net_worth, "w": weights},
+         "banks": banks, "net_worth": net_worth, "financial_krw": financial_krw,
+         "car_krw": car_krw, "w": weights},
     )
 
 
