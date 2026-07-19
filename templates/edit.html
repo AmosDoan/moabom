@@ -20,7 +20,7 @@
       <div>
         <label>구분</label>
         <select name="market">
-          {% for m in ['US','KR','MANUAL'] %}
+          {% for m in ['US','KR','JP','MANUAL'] %}
           <option value="{{ m }}" {{ 'selected' if p.market == m else '' }}>{{ m }}</option>
           {% endfor %}
         </select>
@@ -28,7 +28,7 @@
       <div>
         <label>통화</label>
         <select name="currency">
-          {% for c in ['USD','KRW'] %}
+          {% for c in ['USD','KRW','JPY'] %}
           <option value="{{ c }}" {{ 'selected' if p.currency == c else '' }}>{{ c }}</option>
           {% endfor %}
         </select>

@@ -6,9 +6,9 @@ keeps working with stocks only.
 Values in the sheet are in 만원 (10k KRW) units -> multiplied to KRW here.
 Only NON-stock, NON-duplicated items are pulled:
   - 은행 총액   (예적금/파킹; sheet 달러칸은 0)
-  - Stock Option (LY Corp)
   - 엔화
-금/달러는 대시보드 DB(금현물·USD현금)에 이미 있으므로 제외.
+금/달러/스톡옵션은 대시보드 DB에 이미 있으므로 제외
+  (금현물·USD현금 = 나무 계좌, LY 스톡옵션 = 4689.T 실시간 추적 종목)
 """
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ SHEET_ID = os.environ.get("ASSET_SHEET_ID", "")
 # label in sheet column A -> display name on dashboard
 WANTED = {
     "은행 총액": "은행 예적금",
-    "Stock Option": "스톡옵션(LY)",
     "엔화": "엔화",
 }
 

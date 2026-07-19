@@ -36,7 +36,15 @@ def get_fx() -> float:
     return _cached("fx", _p)
 
 
-def _us_prices(tickers: tuple) -> dict:
+def get_fx_jpy() -> float:
+    def _p():
+        fx = fdr.DataReader("JPY/KRW")
+        return float(fx["Close"].dropna().iloc[-1])
+    return _cached("fx_jpy", _p)
+
+
+def _yf_prices(tickers: tuple) -> dict:
+    """Latest close per yfinance ticker (works for US e.g. AAPL and JP e.g. 4689.T)."""
     if not tickers:
         return {}
 
@@ -44,16 +52,21 @@ def _us_prices(tickers: tuple) -> dict:
         out = {}
         data = yf.download(list(tickers), period="5d", progress=False, group_by="ticker")
         for t in tickers:
+            close = None
+            # grouped columns (data[ticker][Close]) or flat (data[Close])
             try:
-                if len(tickers) == 1:
+                close = data[t]["Close"]
+            except Exception:
+                try:
                     close = data["Close"]
-                else:
-                    close = data[t]["Close"]
-                out[t] = float(close.dropna().iloc[-1])
+                except Exception:
+                    close = None
+            try:
+                out[t] = float(close.dropna().iloc[-1]) if close is not None else None
             except Exception:
                 out[t] = None
         return out
-    return _cached(("us", tickers), _p)
+    return _cached(("yf", tickers), _p)
 
 
 def _kr_price(code: str):
@@ -69,10 +82,20 @@ def _kr_price(code: str):
 def enrich(positions: list[dict]) -> dict:
     """Return {rows, accounts, total_krw, total_pl_krw, fx}. Values in KRW."""
     fx = get_fx()
-    us_tickers = tuple(
-        sorted({p["ticker"] for p in positions if str(p["market"]).upper() == "US" and p.get("ticker")})
-    )
-    us = _us_prices(us_tickers)
+
+    def to_krw(v, cur):
+        if cur == "USD":
+            return v * fx
+        if cur == "JPY":
+            return v * get_fx_jpy()
+        return v  # KRW
+
+    # US and JP both priced through yfinance (AAPL, 4689.T, ...)
+    yf_tickers = tuple(sorted({
+        p["ticker"] for p in positions
+        if str(p["market"]).upper() in ("US", "JP") and p.get("ticker")
+    }))
+    yfp = _yf_prices(yf_tickers)
 
     rows = []
     for p in positions:
@@ -87,17 +110,15 @@ def enrich(positions: list[dict]) -> dict:
         if mkt == "MANUAL":
             mkt_krw = float(fallback) if fallback is not None else 0.0
         else:
-            price = us.get(p["ticker"]) if mkt == "US" else _kr_price(p["ticker"])
+            price = yfp.get(p["ticker"]) if mkt in ("US", "JP") else _kr_price(p["ticker"])
             if price is None:
                 mkt_krw = float(fallback) if fallback is not None else 0.0
                 stale = True
             else:
-                val = (shares or 0) * price
-                mkt_krw = val * fx if cur == "USD" else val
+                mkt_krw = to_krw((shares or 0) * price, cur)
 
         if shares is not None and avg is not None:
-            cost = shares * avg
-            cost_krw = cost * fx if cur == "USD" else cost
+            cost_krw = to_krw(shares * avg, cur)
             pl_krw = mkt_krw - cost_krw
             pl_pct = (pl_krw / cost_krw * 100) if cost_krw else None
         else:
