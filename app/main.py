@@ -157,10 +157,20 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     nonstock = sheets.get_nonstock()  # None until Google 시트 연동됨
     banks = sheets.get_banks()
     net_worth = data["total_krw"] + (nonstock["total_krw"] if nonstock else 0)
+
+    # category weights vs net worth
+    stock_krw = sum(
+        r["mkt_krw"] for r in data["rows"]
+        if str(r.get("market") or "").upper() in ("US", "KR", "JP") and r.get("ticker")
+    )
+    deposit_krw = sum(b["krw"] for b in banks) if banks else 0
+    pct = lambda v: round(v / net_worth * 100, 1) if net_worth else 0
+    weights = {"stock_pct": pct(stock_krw), "deposit_pct": pct(deposit_krw)}
+
     return templates.TemplateResponse(
         "dashboard.html",
         {"request": request, "d": data, "top": top, "nonstock": nonstock,
-         "banks": banks, "net_worth": net_worth},
+         "banks": banks, "net_worth": net_worth, "w": weights},
     )
 
 

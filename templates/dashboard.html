@@ -3,9 +3,21 @@
 {% set won = "{:,.0f}".format %}
 {% if nonstock %}
 <div class="card">
-  <div class="kpi">
-    <div class="label">총 순자산 (주식 + 비주식)</div>
-    <div class="value" style="font-size:28px;">{{ won(net_worth) }}원</div>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">총 순자산 (주식 + 비주식)</div>
+      <div class="value" style="font-size:26px;">{{ won(net_worth) }}원</div>
+    </div>
+    <div class="kpi">
+      <div class="label">주식 비중</div>
+      <div class="value">{{ w.stock_pct }}%</div>
+      <div class="bar" style="margin-top:6px;"><span style="width:{{ w.stock_pct }}%"></span></div>
+    </div>
+    <div class="kpi">
+      <div class="label">예적금 비중</div>
+      <div class="value">{{ w.deposit_pct }}%</div>
+      <div class="bar" style="margin-top:6px;"><span style="width:{{ w.deposit_pct }}%"></span></div>
+    </div>
   </div>
 </div>
 {% endif %}
