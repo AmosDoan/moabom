@@ -117,12 +117,21 @@ def enrich(positions: list[dict]) -> dict:
             else:
                 mkt_krw = to_krw((shares or 0) * price, cur)
 
-        if shares is not None and avg is not None:
+        # cost basis: fixed KRW (accurate for foreign holdings incl. FX) takes priority,
+        # else derive from shares × avg_cost at current FX
+        fixed_krw = p.get("cost_krw")
+        if fixed_krw is not None:
+            cost_krw = float(fixed_krw)
+        elif shares is not None and avg is not None:
             cost_krw = to_krw(shares * avg, cur)
+        else:
+            cost_krw = None
+
+        if cost_krw is not None:
             pl_krw = mkt_krw - cost_krw
             pl_pct = (pl_krw / cost_krw * 100) if cost_krw else None
         else:
-            cost_krw = pl_krw = pl_pct = None
+            pl_krw = pl_pct = None
 
         rows.append(
             {

@@ -50,6 +50,10 @@ def init():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with conn() as c:
         c.executescript(SCHEMA)
+        # migration: fixed KRW cost basis (for foreign holdings where FX matters)
+        cols = [r[1] for r in c.execute("PRAGMA table_info(positions)")]
+        if "cost_krw" not in cols:
+            c.execute("ALTER TABLE positions ADD COLUMN cost_krw REAL")
 
 
 def get_setting(key: str):
@@ -94,7 +98,7 @@ def get_position(pid: int):
 
 
 def upsert_position(data: dict, pid: int | None = None):
-    fields = ("account", "name", "ticker", "market", "currency", "shares", "avg_cost", "manual_value_krw")
+    fields = ("account", "name", "ticker", "market", "currency", "shares", "avg_cost", "manual_value_krw", "cost_krw")
     vals = [data.get(f) or None for f in fields]
     with conn() as c:
         if pid:

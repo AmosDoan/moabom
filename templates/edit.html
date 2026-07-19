@@ -45,6 +45,10 @@
         <label>수동 평가액(원) <span class="muted">(MANUAL/폴백용)</span></label>
         <input name="manual_value_krw" value="{{ p.manual_value_krw if p.manual_value_krw is not none else '' }}">
       </div>
+      <div>
+        <label>취득원가(원) <span class="muted">(외화 종목 정확한 손익용, 선택)</span></label>
+        <input name="cost_krw" value="{{ p.cost_krw if p.cost_krw is not none else '' }}" placeholder="예: 23814488">
+      </div>
     </div>
     <p class="muted" style="margin-top:14px;">
       구분 US는 야후 티커(SKHY), KR은 6자리 코드(005930)로 실시간 조회합니다.

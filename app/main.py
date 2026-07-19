@@ -99,7 +99,7 @@ def _num(v):
 _LOG_FIELDS = [
     ("account", "계좌"), ("name", "종목"), ("ticker", "티커"), ("market", "구분"),
     ("currency", "통화"), ("shares", "수량"), ("avg_cost", "평단"),
-    ("manual_value_krw", "수동평가액"),
+    ("manual_value_krw", "수동평가액"), ("cost_krw", "취득원가"),
 ]
 
 
@@ -193,12 +193,13 @@ def create(
     shares: str = Form(""),
     avg_cost: str = Form(""),
     manual_value_krw: str = Form(""),
+    cost_krw: str = Form(""),
 ):
     data = {
         "account": account, "name": name,
         "ticker": ticker.strip() or None, "market": market, "currency": currency,
         "shares": _num(shares), "avg_cost": _num(avg_cost),
-        "manual_value_krw": _num(manual_value_krw),
+        "manual_value_krw": _num(manual_value_krw), "cost_krw": _num(cost_krw),
     }
     db.upsert_position(data)
     db.add_log("추가", account, name, _summary(data))
@@ -217,12 +218,13 @@ def update(
     shares: str = Form(""),
     avg_cost: str = Form(""),
     manual_value_krw: str = Form(""),
+    cost_krw: str = Form(""),
 ):
     new = {
         "account": account, "name": name,
         "ticker": ticker.strip() or None, "market": market, "currency": currency,
         "shares": _num(shares), "avg_cost": _num(avg_cost),
-        "manual_value_krw": _num(manual_value_krw),
+        "manual_value_krw": _num(manual_value_krw), "cost_krw": _num(cost_krw),
     }
     old = db.get_position(pid) or {}
     db.upsert_position(new, pid=pid)
