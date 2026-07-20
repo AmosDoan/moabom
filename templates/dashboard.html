@@ -300,4 +300,49 @@
   setInterval(live, 30000);
 })();
 </script>
+
+<script>
+// Click a column header to sort that table. Handles currency/sign/arrow cells.
+(function () {
+  function num(s) {
+    s = String(s).replace(/▲/g, '').replace(/▼/g, '-').replace(/🛒/g, '').replace(/[^0-9.\-]/g, '');
+    if (s === '' || s === '-') return null;
+    var v = parseFloat(s);
+    return isNaN(v) ? null : v;
+  }
+  function cell(td) { return td ? (td.textContent || '').trim() : ''; }
+
+  document.querySelectorAll('.tablewrap table').forEach(function (table) {
+    var ths = table.querySelectorAll('thead th');
+    ths.forEach(function (th, idx) {
+      th.style.cursor = 'pointer';
+      th.style.userSelect = 'none';
+      th.addEventListener('click', function () {
+        var tbody = table.querySelector('tbody');
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+        var asc = th.getAttribute('data-asc') !== 'true';
+        ths.forEach(function (o) {
+          o.removeAttribute('data-asc');
+          var i = o.querySelector('.sort-ind'); if (i) i.remove();
+        });
+        th.setAttribute('data-asc', asc);
+        rows.sort(function (a, b) {
+          var av = cell(a.children[idx]), bv = cell(b.children[idx]);
+          var an = num(av), bn = num(bv), cmp;
+          if (an === null && bn === null) cmp = av.localeCompare(bv, 'ko');
+          else if (an === null) return 1;   // empty/dash rows always last
+          else if (bn === null) return -1;
+          else cmp = an - bn;
+          return asc ? cmp : -cmp;
+        });
+        rows.forEach(function (r) { tbody.appendChild(r); });
+        var ind = document.createElement('span');
+        ind.className = 'sort-ind'; ind.style.color = 'var(--muted)';
+        ind.textContent = asc ? ' ▲' : ' ▼';
+        th.appendChild(ind);
+      });
+    });
+  });
+})();
+</script>
 {% endblock %}
