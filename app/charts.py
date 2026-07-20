@@ -5,6 +5,16 @@ light/dark theming lives in one place.
 """
 from __future__ import annotations
 
+from datetime import date
+
+
+def _ordinal(day: str):
+    try:
+        y, m, d = day.split("-")
+        return date(int(y), int(m), int(d)).toordinal()
+    except Exception:
+        return None
+
 
 def donut_segments(items: list[dict]) -> list[dict]:
     """items: [{name, krw}] -> segments with stroke-dasharray/offset for a
@@ -35,9 +45,16 @@ def line_geom(series: list[dict], w: int = 320, h: int = 90, pad: int = 6) -> di
     lo, hi = min(vals), max(vals)
     span = (hi - lo) or 1
     n = len(series)
+    # x spacing by actual date when parseable (handles irregular gaps), else even
+    ords = [_ordinal(s.get("day", "")) for s in series]
+    if all(o is not None for o in ords) and ords[-1] != ords[0]:
+        o0, oN = ords[0], ords[-1]
+        xfrac = [(o - o0) / (oN - o0) for o in ords]
+    else:
+        xfrac = [i / (n - 1) for i in range(n)]
     pts = []
-    for i, s in enumerate(series):
-        x = pad + i / (n - 1) * (w - 2 * pad)
+    for s, xf in zip(series, xfrac):
+        x = pad + xf * (w - 2 * pad)
         y = h - pad - (s["krw"] - lo) / span * (h - 2 * pad)
         pts.append((round(x, 1), round(y, 1)))
     poly = " ".join(f"{x},{y}" for x, y in pts)

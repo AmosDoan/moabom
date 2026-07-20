@@ -213,6 +213,10 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     series = db.net_worth_series(120)
     line = charts.line_geom(series)
 
+    # 주식 평가액 추이 (구글 시트 Stock 탭 기록)
+    stock_hist = sheets.get_stock_history()
+    stock_line = charts.line_geom(stock_hist) if stock_hist else None
+
     priced_at_str = (
         datetime.fromtimestamp(data["priced_at"]).strftime("%m-%d %H:%M")
         if data.get("priced_at") else None
@@ -223,7 +227,8 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         {"request": request, "d": data, "top": top, "nonstock": nonstock,
          "banks": banks, "net_worth": net_worth, "financial_krw": financial_krw,
          "ex_pension_krw": ex_pension_krw, "car_krw": car_krw, "w": weights,
-         "alloc": alloc, "bars": bar_items, "line": line, "priced_at": priced_at_str},
+         "alloc": alloc, "bars": bar_items, "line": line, "stock_line": stock_line,
+         "priced_at": priced_at_str},
     )
 
 

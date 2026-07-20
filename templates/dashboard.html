@@ -122,6 +122,21 @@
   {% endif %}
 </div>
 
+{% if stock_line %}
+<div class="card viz">
+  <div class="acc-head">
+    <span class="n">주식 평가액 추이 <span class="muted">(구글 시트 기록)</span></span>
+    <span class="v">{{ won(stock_line.last.krw) }}원</span>
+  </div>
+  <svg viewBox="0 0 {{ stock_line.w }} {{ stock_line.h }}" class="spark" preserveAspectRatio="none" role="img" aria-label="주식 평가액 추이">
+    <path d="{{ stock_line.area }}" fill="var(--cat2)" opacity="0.12"></path>
+    <polyline points="{{ stock_line.points }}" fill="none" stroke="var(--cat2)" stroke-width="2"
+              stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+  </svg>
+  <div class="asof">{{ stock_line.first.day }} ~ {{ stock_line.last.day }} · 날짜 간격 반영</div>
+</div>
+{% endif %}
+
 <div class="card viz">
   <div class="acc-head"><span class="n">계좌별 규모</span></div>
   {% for b in bars %}

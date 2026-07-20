@@ -91,6 +91,44 @@ def get_banks() -> list[dict] | None:
     return banks or None
 
 
+def get_stock_history() -> list[dict] | None:
+    """Parse the 'Stock' worksheet: date -> 주식 평가액(만원). Returns
+    [{day:'YYYY-MM-DD', krw}] sorted ascending, or None."""
+    if not available():
+        return None
+    import re
+    import time as _t
+
+    now = _t.time()
+    hit = _CACHE.get("stockhist")
+    if hit and now - hit[0] < _TTL:
+        return hit[1]
+
+    try:
+        import gspread
+        gc = gspread.service_account(filename=KEY_PATH)
+        rows = gc.open_by_key(SHEET_ID).worksheet("Stock").get_all_values()
+    except Exception:
+        return None
+
+    date_re = re.compile(r"^\d{4}\.\d{1,2}\.\d{1,2}$")
+    pts: dict[str, int] = {}
+    for r in rows:
+        day = (r[0] if r else "").strip()
+        if not date_re.match(day):
+            continue
+        val = _num_cell(r[1]) if len(r) > 1 else None
+        if val is None:
+            continue
+        y, m, d = day.split(".")
+        iso = f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+        pts[iso] = round(val * 10000)  # last occurrence wins
+    series = [{"day": k, "krw": pts[k]} for k in sorted(pts)]
+    result = series or None
+    _CACHE["stockhist"] = (now, result)
+    return result
+
+
 def get_nonstock() -> dict | None:
     """Return {'assets':[{name,krw}], 'total_krw':int} or None if not configured."""
     if not available():
