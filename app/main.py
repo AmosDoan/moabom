@@ -97,6 +97,17 @@ def _num(v):
     return float(v) if v else None
 
 
+def _money(val, cur) -> str:
+    """Per-share price/cost in native currency (mirrors the template macro)."""
+    if val is None:
+        return "-"
+    if cur == "USD":
+        return f"${val:.2f}"
+    if cur == "JPY":
+        return f"¥{val:.0f}"
+    return f"{val:,.0f}원"
+
+
 # fields tracked in the change log, with Korean labels
 _LOG_FIELDS = [
     ("account", "계좌"), ("name", "종목"), ("ticker", "티커"), ("market", "구분"),
@@ -355,6 +366,35 @@ def password_change(
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+
+@app.get("/api/live")
+def api_live(user: str = Depends(require_login)):
+    """Lightweight JSON for client polling: live prices/values per position."""
+    data = prices.enrich(db.all_positions())
+    rows = {}
+    for r in data["rows"]:
+        pl = r["pl_krw"]
+        rows[str(r["id"])] = {
+            "price": _money(r["price"], r["currency"]),
+            "mkt": f'{r["mkt_krw"]:,}',
+            "pl": (("+" if pl >= 0 else "") + f"{pl:,}") if pl is not None else "-",
+            "pl_pct": (("+" if r["pl_pct"] >= 0 else "") + f'{r["pl_pct"]}%') if r["pl_pct"] is not None else "-",
+            "up": (pl or 0) >= 0,
+        }
+    priced = (
+        datetime.fromtimestamp(data["priced_at"]).strftime("%m-%d %H:%M")
+        if data.get("priced_at") else None
+    )
+    tpl = data["total_pl_krw"]
+    return {
+        "priced_at": priced,
+        "total_krw": f'{data["total_krw"]:,}',
+        "total_pl": ("+" if tpl >= 0 else "") + f"{tpl:,}",
+        "total_up": tpl >= 0,
+        "fx": f'{data["fx"]:,.1f}',
+        "rows": rows,
+    }
 
 
 @app.get("/health")

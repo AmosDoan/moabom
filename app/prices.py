@@ -16,7 +16,7 @@ import yfinance as yf
 import FinanceDataReader as fdr
 
 _CACHE: dict = {}
-_TTL = 600  # seconds
+_TTL = 60  # seconds (client polls ~60s; keep cache short so polls get fresh data)
 
 # epoch of the most recent *actual* market-data fetch (not a cache hit)
 _LAST_FETCH: dict = {"ts": None}
