@@ -18,6 +18,17 @@ import FinanceDataReader as fdr
 _CACHE: dict = {}
 _TTL = 600  # seconds
 
+# epoch of the most recent *actual* market-data fetch (not a cache hit)
+_LAST_FETCH: dict = {"ts": None}
+
+
+def _touch_fetch():
+    _LAST_FETCH["ts"] = time.time()
+
+
+def priced_at() -> float | None:
+    return _LAST_FETCH["ts"]
+
 
 def _cached(key, producer):
     now = time.time()
@@ -49,6 +60,7 @@ def _yf_prices(tickers: tuple) -> dict:
         return {}
 
     def _p():
+        _touch_fetch()
         out = {}
         data = yf.download(list(tickers), period="5d", progress=False, group_by="ticker")
         for t in tickers:
@@ -71,6 +83,7 @@ def _yf_prices(tickers: tuple) -> dict:
 
 def _kr_price(code: str):
     def _p():
+        _touch_fetch()
         h = fdr.DataReader(code)
         return float(h["Close"].dropna().iloc[-1])
     try:
@@ -170,4 +183,5 @@ def enrich(positions: list[dict]) -> dict:
         "total_krw": round(total),
         "total_pl_krw": round(total_pl),
         "fx": fx,
+        "priced_at": priced_at(),
     }

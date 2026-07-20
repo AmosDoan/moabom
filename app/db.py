@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS change_log (
     name    TEXT,
     detail  TEXT
 );
+CREATE TABLE IF NOT EXISTS net_worth_history (
+    day TEXT PRIMARY KEY,       -- YYYY-MM-DD
+    krw REAL NOT NULL
+);
 """
 
 
@@ -84,6 +88,24 @@ def recent_logs(limit: int = 100):
         return [dict(r) for r in c.execute(
             "SELECT * FROM change_log ORDER BY id DESC LIMIT ?", (limit,)
         )]
+
+
+def record_net_worth(day: str, krw: float):
+    """Upsert one snapshot per day (last visit of the day wins)."""
+    with conn() as c:
+        c.execute(
+            "INSERT INTO net_worth_history (day, krw) VALUES (?, ?) "
+            "ON CONFLICT(day) DO UPDATE SET krw=excluded.krw",
+            (day, krw),
+        )
+
+
+def net_worth_series(limit_days: int = 120):
+    with conn() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT day, krw FROM net_worth_history ORDER BY day DESC LIMIT ?", (limit_days,)
+        )]
+    return list(reversed(rows))  # oldest -> newest
 
 
 def all_positions():

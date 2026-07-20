@@ -1,6 +1,29 @@
 {% extends "base.html" %}
 {% block body %}
 {% set won = "{:,.0f}".format %}
+{%- macro price_disp(r) -%}
+  {%- if r.price is none -%}-
+  {%- elif r.currency == 'USD' -%}${{ '%.2f'|format(r.price) }}
+  {%- elif r.currency == 'JPY' -%}¥{{ '%.0f'|format(r.price) }}
+  {%- else -%}{{ '{:,.0f}'.format(r.price) }}원
+  {%- endif -%}
+{%- endmacro -%}
+<style>
+  .viz { --cat1:#2a78d6; --cat2:#1baf7a; --cat3:#eda100; --cat4:#008300; --cat5:#4a3aa7;
+         --axis:#c3c2b7; --grid:#e1e0d9; }
+  @media (prefers-color-scheme: dark) {
+    .viz { --cat1:#3987e5; --cat2:#199e70; --cat3:#c98500; --cat4:#008300; --cat5:#9085e9;
+           --axis:#383835; --grid:#2c2c2a; }
+  }
+  .donut-wrap { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+  .donut { width:150px; height:150px; flex:0 0 auto; }
+  .legend { display:flex; flex-direction:column; gap:7px; font-size:14px; }
+  .leg { display:flex; align-items:center; gap:8px; }
+  .sw { width:11px; height:11px; border-radius:3px; flex:0 0 auto; }
+  .leg b { margin-left:auto; font-variant-numeric:tabular-nums; }
+  .spark { width:100%; height:100px; display:block; }
+  .asof { font-size:12px; color:var(--muted); }
+</style>
 {% if nonstock %}
 <div class="card">
   <div class="kpis">
@@ -53,8 +76,55 @@
     <div class="kpi">
       <div class="label">환율 (USD/KRW)</div>
       <div class="value">{{ "{:,.1f}".format(d.fx) }}</div>
+      {% if priced_at %}<div class="asof">시세 기준 {{ priced_at }}</div>{% endif %}
     </div>
   </div>
+</div>
+
+<div class="card viz">
+  <div class="acc-head"><span class="n">자산 구성</span></div>
+  <div class="donut-wrap">
+    <svg viewBox="0 0 42 42" class="donut" role="img" aria-label="자산 구성 도넛 차트">
+      <circle cx="21" cy="21" r="15.915" fill="none" stroke="var(--grid)" stroke-width="5"></circle>
+      {% for s in alloc %}{% if s.pct > 0 %}
+      <circle cx="21" cy="21" r="15.915" fill="none" stroke="var({{ s.var }})" stroke-width="5"
+              stroke-dasharray="{{ s.dash }} {{ s.gap }}" stroke-dashoffset="{{ s.offset }}"></circle>
+      {% endif %}{% endfor %}
+    </svg>
+    <div class="legend">
+      {% for s in alloc %}
+      <div class="leg"><span class="sw" style="background:var({{ s.var }})"></span>{{ s.name }}
+        <b>{{ s.pct }}% · {{ won(s.krw) }}원</b></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card viz">
+  <div class="acc-head">
+    <span class="n">순자산 추이</span>
+    {% if line %}<span class="v">{{ won(line.last.krw) }}원</span>{% endif %}
+  </div>
+  {% if line %}
+  <svg viewBox="0 0 {{ line.w }} {{ line.h }}" class="spark" preserveAspectRatio="none" role="img" aria-label="순자산 추이">
+    <path d="{{ line.area }}" fill="var(--cat1)" opacity="0.12"></path>
+    <polyline points="{{ line.points }}" fill="none" stroke="var(--cat1)" stroke-width="2"
+              stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+  </svg>
+  <div class="asof">{{ line.first.day }} ~ {{ line.last.day }} · 매일 방문 시 자동 기록</div>
+  {% else %}
+  <p class="muted">추이 그래프는 기록이 이틀 이상 쌓이면 표시됩니다. (오늘 첫 스냅샷 저장됨)</p>
+  {% endif %}
+</div>
+
+<div class="card viz">
+  <div class="acc-head"><span class="n">계좌별 규모</span></div>
+  {% for b in bars %}
+  <div class="acc-head" style="margin:8px 0 3px;">
+    <span>{{ b.name }}</span><span class="muted">{{ won(b.krw) }}원</span>
+  </div>
+  <div class="bar"><span style="width:{{ b.pct }}%; background:var(--cat1);"></span></div>
+  {% endfor %}
 </div>
 
 <div class="card">
@@ -75,11 +145,12 @@
   </div>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>종목</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
+      <thead><tr><th>종목</th><th>현재가</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
       <tbody>
       {% for r in a.rows %}
         <tr>
           <td>{{ r.name }}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</td>
+          <td>{{ price_disp(r) }}</td>
           <td>{{ won(r.mkt_krw) }}</td>
           <td class="{{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">
             {{ ('+' if r.pl_krw >= 0 else '') ~ won(r.pl_krw) if r.pl_krw is not none else '-' }}
