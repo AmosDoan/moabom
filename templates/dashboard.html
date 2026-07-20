@@ -11,6 +11,9 @@
 <style>
   .asof { font-size:12px; color:var(--muted); }
   .tk { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.3px; }
+  .ext { font-size:11px; margin-top:2px; white-space:nowrap; }
+  .ext .tag { display:inline-block; padding:0 4px; border-radius:4px; font-size:10px;
+              background:var(--line); color:var(--muted); margin-right:3px; }
 </style>
 {% if nonstock %}
 <div class="card">
@@ -118,7 +121,10 @@
         <tr data-live-id="{{ r.id }}">
           <td>{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</td>
           <td class="muted">{{ money(r.avg_cost, r.currency) }}</td>
-          <td class="c-price">{{ money(r.price, r.currency) }}</td>
+          <td>
+            <span class="c-price">{{ money(r.price, r.currency) }}</span>
+            <div class="c-ext ext">{% if r.live_price %}<span class="tag">{{ r.live_session }}</span>{{ money(r.live_price, r.currency) }}{% endif %}</div>
+          </td>
           <td class="c-chg {{ 'up' if (r.chg_pct or 0) >= 0 else 'down' }}">{% if r.chg_pct is not none %}{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}{% else %}-{% endif %}</td>
           <td class="c-mkt">{{ won(r.mkt_krw) }}</td>
           <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">
@@ -290,6 +296,11 @@
         const tr = document.querySelector('tr[data-live-id="' + id + '"]');
         if (!tr) continue;
         setText(tr.querySelector('.c-price'), v.price);
+        var ext = tr.querySelector('.c-ext');
+        if (ext) {
+          if (v.ext) { var sp = v.ext.indexOf(' '); ext.innerHTML = '<span class="tag">' + v.ext.slice(0, sp) + '</span>' + v.ext.slice(sp + 1); }
+          else ext.textContent = '';
+        }
         var chg = tr.querySelector('.c-chg'); setText(chg, v.chg); setSign(chg, v.chg_up);
         setText(tr.querySelector('.c-mkt'), v.mkt);
         const pl = tr.querySelector('.c-pl'); setText(pl, v.pl); setSign(pl, v.up);

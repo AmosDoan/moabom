@@ -8,12 +8,36 @@ from __future__ import annotations
 
 import time
 import warnings
+from datetime import datetime, time as dtime
+
+try:
+    from zoneinfo import ZoneInfo
+    _ET = ZoneInfo("America/New_York")
+except Exception:  # pragma: no cover
+    _ET = None
 
 warnings.filterwarnings("ignore")
 
 import pandas as pd
 import yfinance as yf
 import FinanceDataReader as fdr
+
+
+def us_session() -> str:
+    """Current US equities session by New York wall clock: 프리마켓/장중/애프터마켓/휴장."""
+    if _ET is None:
+        return "휴장"
+    now = datetime.now(_ET)
+    if now.weekday() >= 5:
+        return "휴장"
+    t = now.time()
+    if dtime(4, 0) <= t < dtime(9, 30):
+        return "프리마켓"
+    if dtime(9, 30) <= t < dtime(16, 0):
+        return "장중"
+    if dtime(16, 0) <= t < dtime(20, 0):
+        return "애프터마켓"
+    return "휴장"
 
 _CACHE: dict = {}
 _TTL = 30  # seconds (client polls ~30s; keep cache short so polls get fresh data)
@@ -91,6 +115,33 @@ def _yf_prices(tickers: tuple) -> dict:
     return _cached(("yf", tickers), _p)
 
 
+def _yf_live(tickers: tuple) -> dict:
+    """Latest 1-minute close incl. pre/post-market, {ticker: price}. US ext hours."""
+    if not tickers:
+        return {}
+
+    def _p():
+        _touch_fetch()
+        out = {}
+        data = yf.download(list(tickers), period="1d", interval="1m",
+                           prepost=True, progress=False, group_by="ticker")
+        for t in tickers:
+            close = None
+            try:
+                close = data[t]["Close"]
+            except Exception:
+                try:
+                    close = data["Close"]
+                except Exception:
+                    close = None
+            try:
+                out[t] = float(close.dropna().iloc[-1]) if close is not None else None
+            except Exception:
+                out[t] = None
+        return out
+    return _cached(("live", tickers), _p)
+
+
 def _kr_price(code: str) -> dict:
     def _p():
         _touch_fetch()
@@ -119,6 +170,15 @@ def enrich(positions: list[dict]) -> dict:
     }))
     yfp = _yf_prices(yf_tickers)
 
+    # US pre/after-market live price: only fetch during ext-hours sessions
+    session = us_session()
+    us_ext = session in ("프리마켓", "애프터마켓")
+    us_tickers = tuple(sorted({
+        p["ticker"] for p in positions
+        if str(p["market"]).upper() == "US" and p.get("ticker")
+    }))
+    live_map = _yf_live(us_tickers) if (us_ext and us_tickers) else {}
+
     rows = []
     for p in positions:
         mkt = str(p["market"]).upper()
@@ -141,6 +201,15 @@ def enrich(positions: list[dict]) -> dict:
                 stale = True
             else:
                 mkt_krw = to_krw((shares or 0) * price, cur)
+
+        # US pre/after-market price (shown separately from regular 현재가)
+        live_price = None
+        live_session = None
+        if mkt == "US" and us_ext:
+            lp = live_map.get(p.get("ticker"))
+            if lp is not None:
+                live_price = lp
+                live_session = session
 
         # day-over-day change (native price) + naive buy-the-dip flag
         if price is not None and prev:
@@ -176,6 +245,8 @@ def enrich(positions: list[dict]) -> dict:
                 "pl_pct": (round(pl_pct, 1) + 0.0) if pl_pct is not None else None,
                 "chg_pct": (round(chg_pct, 1) + 0.0) if chg_pct is not None else None,
                 "buy": buy,
+                "live_price": live_price,
+                "live_session": live_session,
             }
         )
 

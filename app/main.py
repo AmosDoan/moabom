@@ -398,8 +398,12 @@ def api_live(user: str = Depends(require_login)):
         pl = r["pl_krw"]
         chg = r["chg_pct"]
         chg_str = (("▲" if chg >= 0 else "▼") + f"{abs(chg):.1f}%" + (" 🛒" if r["buy"] else "")) if chg is not None else "-"
+        ext = ""
+        if r.get("live_price"):
+            ext = r["live_session"] + " " + _money(r["live_price"], r["currency"])
         rows[str(r["id"])] = {
             "price": _money(r["price"], r["currency"]),
+            "ext": ext,
             "chg": chg_str,
             "chg_up": (chg or 0) >= 0,
             "mkt": f'{r["mkt_krw"]:,}',
