@@ -76,7 +76,7 @@
     <div class="kpi">
       <div class="label">환율 (USD/KRW)</div>
       <div class="value"><span id="fx">{{ "{:,.1f}".format(d.fx) }}</span></div>
-      <div class="asof" id="asof">{% if priced_at %}시세 기준 {{ priced_at }} · 60초 자동 갱신{% endif %}</div>
+      <div class="asof" id="asof">{% if priced_at %}시세 기준 {{ priced_at }} · 30초 자동 갱신{% endif %}</div>
     </div>
   </div>
 </div>
@@ -215,7 +215,7 @@
 </div>
 {% endif %}
 
-<p class="muted">시세는 60초마다 자동 갱신됩니다 (무료 데이터라 실제 시세는 지연될 수 있어요). 매매 후에는 <a href="/positions">종목 관리</a>에서 수량·평단을 수정해 주세요.</p>
+<p class="muted">시세는 30초마다 자동 갱신됩니다 (무료 데이터라 실제 시세는 지연될 수 있어요). 매매 후에는 <a href="/positions">종목 관리</a>에서 수량·평단을 수정해 주세요.</p>
 
 <script>
 (function () {
@@ -232,7 +232,7 @@
       setText(document.getElementById('total-krw'), d.total_krw);
       const tp = document.getElementById('total-pl'); setText(tp, d.total_pl + '원'); setSign(tp, d.total_up);
       setText(document.getElementById('fx'), d.fx);
-      if (d.priced_at) setText(document.getElementById('asof'), '시세 기준 ' + d.priced_at + ' · 60초 자동 갱신');
+      if (d.priced_at) setText(document.getElementById('asof'), '시세 기준 ' + d.priced_at + ' · 30초 자동 갱신');
       for (const id in d.rows) {
         const v = d.rows[id];
         const tr = document.querySelector('tr[data-live-id="' + id + '"]');
@@ -244,7 +244,7 @@
       }
     } catch (e) { /* keep last values on transient error */ }
   }
-  setInterval(live, 60000);
+  setInterval(live, 30000);
 })();
 </script>
 {% endblock %}
