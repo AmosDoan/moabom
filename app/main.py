@@ -396,8 +396,12 @@ def api_live(user: str = Depends(require_login)):
     rows = {}
     for r in data["rows"]:
         pl = r["pl_krw"]
+        chg = r["chg_pct"]
+        chg_str = (("▲" if chg >= 0 else "▼") + f"{abs(chg):.1f}%" + (" 🛒" if r["buy"] else "")) if chg is not None else "-"
         rows[str(r["id"])] = {
             "price": _money(r["price"], r["currency"]),
+            "chg": chg_str,
+            "chg_up": (chg or 0) >= 0,
             "mkt": f'{r["mkt_krw"]:,}',
             "pl": (("+" if pl >= 0 else "") + f"{pl:,}") if pl is not None else "-",
             "pl_pct": (("+" if r["pl_pct"] >= 0 else "") + f'{r["pl_pct"]}%') if r["pl_pct"] is not None else "-",

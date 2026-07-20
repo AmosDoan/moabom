@@ -18,6 +18,8 @@ import FinanceDataReader as fdr
 _CACHE: dict = {}
 _TTL = 30  # seconds (client polls ~30s; keep cache short so polls get fresh data)
 
+BUY_DIP_PCT = -3.0  # 전일 대비 이 % 이하로 하락하면 "매수?" 표시 (단순 규칙, 자문 아님)
+
 # epoch of the most recent *actual* market-data fetch (not a cache hit)
 _LAST_FETCH: dict = {"ts": None}
 
@@ -54,18 +56,28 @@ def get_fx_jpy() -> float:
     return _cached("fx_jpy", _p)
 
 
+def _last_prev(series):
+    """(latest, previous) close from a pandas Close series, or (None, None)."""
+    try:
+        s = series.dropna()
+        last = float(s.iloc[-1])
+        prev = float(s.iloc[-2]) if len(s) >= 2 else None
+        return last, prev
+    except Exception:
+        return None, None
+
+
 def _yf_prices(tickers: tuple) -> dict:
-    """Latest close per yfinance ticker (works for US e.g. AAPL and JP e.g. 4689.T)."""
+    """{ticker: {'price':last, 'prev':prev_close}} for US (AAPL) and JP (4689.T)."""
     if not tickers:
         return {}
 
     def _p():
         _touch_fetch()
         out = {}
-        data = yf.download(list(tickers), period="5d", progress=False, group_by="ticker")
+        data = yf.download(list(tickers), period="7d", progress=False, group_by="ticker")
         for t in tickers:
             close = None
-            # grouped columns (data[ticker][Close]) or flat (data[Close])
             try:
                 close = data[t]["Close"]
             except Exception:
@@ -73,23 +85,20 @@ def _yf_prices(tickers: tuple) -> dict:
                     close = data["Close"]
                 except Exception:
                     close = None
-            try:
-                out[t] = float(close.dropna().iloc[-1]) if close is not None else None
-            except Exception:
-                out[t] = None
+            last, prev = _last_prev(close) if close is not None else (None, None)
+            out[t] = {"price": last, "prev": prev}
         return out
     return _cached(("yf", tickers), _p)
 
 
-def _kr_price(code: str):
+def _kr_price(code: str) -> dict:
     def _p():
         _touch_fetch()
-        h = fdr.DataReader(code)
-        return float(h["Close"].dropna().iloc[-1])
+        return dict(zip(("price", "prev"), _last_prev(fdr.DataReader(code)["Close"])))
     try:
         return _cached(("kr", code), _p)
     except Exception:
-        return None
+        return {"price": None, "prev": None}
 
 
 def enrich(positions: list[dict]) -> dict:
@@ -118,17 +127,28 @@ def enrich(positions: list[dict]) -> dict:
         avg = p.get("avg_cost")
         fallback = p.get("manual_value_krw")
         price = None
+        prev = None
         stale = False
 
         if mkt == "MANUAL":
             mkt_krw = float(fallback) if fallback is not None else 0.0
         else:
-            price = yfp.get(p["ticker"]) if mkt in ("US", "JP") else _kr_price(p["ticker"])
+            info = (yfp.get(p["ticker"]) if mkt in ("US", "JP") else _kr_price(p["ticker"])) or {}
+            price = info.get("price")
+            prev = info.get("prev")
             if price is None:
                 mkt_krw = float(fallback) if fallback is not None else 0.0
                 stale = True
             else:
                 mkt_krw = to_krw((shares or 0) * price, cur)
+
+        # day-over-day change (native price) + naive buy-the-dip flag
+        if price is not None and prev:
+            chg_pct = (price - prev) / prev * 100
+            buy = chg_pct <= BUY_DIP_PCT
+        else:
+            chg_pct = None
+            buy = False
 
         # cost basis: fixed KRW (accurate for foreign holdings incl. FX) takes priority,
         # else derive from shares × avg_cost at current FX
@@ -153,7 +173,9 @@ def enrich(positions: list[dict]) -> dict:
                 "stale": stale,
                 "mkt_krw": round(mkt_krw),
                 "pl_krw": round(pl_krw) if pl_krw is not None else None,
-                "pl_pct": round(pl_pct, 1) if pl_pct is not None else None,
+                "pl_pct": (round(pl_pct, 1) + 0.0) if pl_pct is not None else None,
+                "chg_pct": (round(chg_pct, 1) + 0.0) if chg_pct is not None else None,
+                "buy": buy,
             }
         )
 
