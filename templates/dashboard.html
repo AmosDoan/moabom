@@ -9,19 +9,6 @@
   {%- endif -%}
 {%- endmacro -%}
 <style>
-  .viz { --cat1:#2a78d6; --cat2:#1baf7a; --cat3:#eda100; --cat4:#008300; --cat5:#4a3aa7;
-         --axis:#c3c2b7; --grid:#e1e0d9; }
-  @media (prefers-color-scheme: dark) {
-    .viz { --cat1:#3987e5; --cat2:#199e70; --cat3:#c98500; --cat4:#008300; --cat5:#9085e9;
-           --axis:#383835; --grid:#2c2c2a; }
-  }
-  .donut-wrap { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
-  .donut { width:150px; height:150px; flex:0 0 auto; }
-  .legend { display:flex; flex-direction:column; gap:7px; font-size:14px; }
-  .leg { display:flex; align-items:center; gap:8px; }
-  .sw { width:11px; height:11px; border-radius:3px; flex:0 0 auto; }
-  .leg b { margin-left:auto; font-variant-numeric:tabular-nums; }
-  .spark { width:100%; height:100px; display:block; }
   .asof { font-size:12px; color:var(--muted); }
   .tk { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.3px; }
 </style>
@@ -86,65 +73,25 @@
   </div>
 </div>
 
-<div class="card viz">
+<div class="card">
   <div class="acc-head"><span class="n">자산 구성</span></div>
-  <div class="donut-wrap">
-    <svg viewBox="0 0 42 42" class="donut" role="img" aria-label="자산 구성 도넛 차트">
-      <circle cx="21" cy="21" r="15.915" fill="none" stroke="var(--grid)" stroke-width="5"></circle>
-      {% for s in alloc %}{% if s.pct > 0 %}
-      <circle cx="21" cy="21" r="15.915" fill="none" stroke="var({{ s.var }})" stroke-width="5"
-              stroke-dasharray="{{ s.dash }} {{ s.gap }}" stroke-dashoffset="{{ s.offset }}"></circle>
-      {% endif %}{% endfor %}
-    </svg>
-    <div class="legend">
-      {% for s in alloc %}
-      <div class="leg"><span class="sw" style="background:var({{ s.var }})"></span>{{ s.name }}
-        <b>{{ s.pct }}% · {{ won(s.krw) }}원</b></div>
-      {% endfor %}
-    </div>
-  </div>
+  <div id="chart-alloc"></div>
 </div>
 
-<div class="card viz">
-  <div class="acc-head">
-    <span class="n">순자산 추이</span>
-    {% if line %}<span class="v">{{ won(line.last.krw) }}원</span>{% endif %}
-  </div>
-  {% if line %}
-  <svg viewBox="0 0 {{ line.w }} {{ line.h }}" class="spark" preserveAspectRatio="none" role="img" aria-label="순자산 추이">
-    <path d="{{ line.area }}" fill="var(--cat1)" opacity="0.12"></path>
-    <polyline points="{{ line.points }}" fill="none" stroke="var(--cat1)" stroke-width="2"
-              stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
-  </svg>
-  <div class="asof">{{ line.first.day }} ~ {{ line.last.day }} · 매일 방문 시 자동 기록</div>
-  {% else %}
-  <p class="muted">추이 그래프는 기록이 이틀 이상 쌓이면 표시됩니다. (오늘 첫 스냅샷 저장됨)</p>
-  {% endif %}
+<div class="card">
+  <div class="acc-head"><span class="n">순자산 추이</span></div>
+  <div id="chart-net"></div>
+  <p class="muted" id="net-empty" style="display:none;">추이 그래프는 기록이 이틀 이상 쌓이면 표시됩니다. (오늘 첫 스냅샷 저장됨)</p>
 </div>
 
-{% if stock_line %}
-<div class="card viz">
-  <div class="acc-head">
-    <span class="n">주식 평가액 추이 <span class="muted">(구글 시트 기록)</span></span>
-    <span class="v">{{ won(stock_line.last.krw) }}원</span>
-  </div>
-  <svg viewBox="0 0 {{ stock_line.w }} {{ stock_line.h }}" class="spark" preserveAspectRatio="none" role="img" aria-label="주식 평가액 추이">
-    <path d="{{ stock_line.area }}" fill="var(--cat2)" opacity="0.12"></path>
-    <polyline points="{{ stock_line.points }}" fill="none" stroke="var(--cat2)" stroke-width="2"
-              stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
-  </svg>
-  <div class="asof">{{ stock_line.first.day }} ~ {{ stock_line.last.day }} · 날짜 간격 반영</div>
+<div class="card">
+  <div class="acc-head"><span class="n">주식 평가액 추이 <span class="muted">(구글 시트 기록)</span></span></div>
+  <div id="chart-stock"></div>
 </div>
-{% endif %}
 
-<div class="card viz">
+<div class="card">
   <div class="acc-head"><span class="n">계좌별 규모</span></div>
-  {% for b in bars %}
-  <div class="acc-head" style="margin:8px 0 3px;">
-    <span>{{ b.name }}</span><span class="muted">{{ won(b.krw) }}원</span>
-  </div>
-  <div class="bar"><span style="width:{{ b.pct }}%; background:var(--cat1);"></span></div>
-  {% endfor %}
+  <div id="chart-bars"></div>
 </div>
 
 <div class="card">
@@ -236,6 +183,88 @@
 {% endif %}
 
 <p class="muted">시세는 30초마다 자동 갱신됩니다 (무료 데이터라 실제 시세는 지연될 수 있어요). 매매 후에는 <a href="/positions">종목 관리</a>에서 수량·평단을 수정해 주세요.</p>
+
+<script id="chart-data" type="application/json">{{ chart_data|safe }}</script>
+<script src="/static/apexcharts.min.js"></script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('chart-data').textContent);
+  var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var PAL = dark ? ['#3987e5','#199e70','#c98500','#008300','#9085e9']
+                 : ['#2a78d6','#1baf7a','#eda100','#008300','#4a3aa7'];
+  var ink = dark ? '#c3c2b7' : '#52514e';
+  var grid = dark ? '#2c2c2a' : '#e1e0d9';
+  var won = function (v) { return new Intl.NumberFormat('ko-KR').format(Math.round(v)); };
+  var base = { chart: { fontFamily: 'inherit', foreColor: ink, toolbar: { show: false }, animations: { easing: 'easeinout', speed: 500 } },
+               grid: { borderColor: grid, strokeDashArray: 3 },
+               tooltip: { theme: dark ? 'dark' : 'light' } };
+  function merge(a, b) { var o = {}; for (var k in a) o[k] = a[k]; for (var k in b) o[k] = b[k]; return o; }
+
+  // 1) 자산 구성 도넛
+  if (D.alloc && D.alloc.length) {
+    new ApexCharts(document.getElementById('chart-alloc'), merge(base, {
+      chart: merge(base.chart, { type: 'donut', height: 300 }),
+      series: D.alloc.map(function (a) { return a.krw; }),
+      labels: D.alloc.map(function (a) { return a.name; }),
+      colors: PAL,
+      legend: { position: 'bottom' },
+      dataLabels: { formatter: function (v) { return v.toFixed(1) + '%'; } },
+      plotOptions: { pie: { donut: { size: '62%', labels: { show: true,
+        total: { show: true, label: '합계', formatter: function (w) {
+          return won(w.globals.seriesTotals.reduce(function (s, v) { return s + v; }, 0)) + '원'; } } } } } },
+      tooltip: merge(base.tooltip, { y: { formatter: function (v) { return won(v) + '원'; } } }),
+      stroke: { colors: [dark ? '#171b21' : '#fff'], width: 2 },
+    })).render();
+  }
+
+  // 2) 순자산 추이 (일별)
+  if (D.net && D.net.length >= 2) {
+    new ApexCharts(document.getElementById('chart-net'), merge(base, {
+      chart: merge(base.chart, { type: 'area', height: 240 }),
+      series: [{ name: '순자산', data: D.net.map(function (p) { return [p.day, p.krw]; }) }],
+      colors: [PAL[0]],
+      xaxis: { type: 'datetime' },
+      yaxis: { labels: { formatter: function (v) { return (v / 1e8).toFixed(2) + '억'; } } },
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0.03 } },
+      dataLabels: { enabled: false },
+      tooltip: merge(base.tooltip, { x: { format: 'yyyy-MM-dd' }, y: { formatter: function (v) { return won(v) + '원'; } } }),
+    })).render();
+  } else {
+    document.getElementById('net-empty').style.display = 'block';
+  }
+
+  // 3) 주식 평가액 추이 (구글 시트, 불규칙 날짜)
+  if (D.stock && D.stock.length >= 2) {
+    new ApexCharts(document.getElementById('chart-stock'), merge(base, {
+      chart: merge(base.chart, { type: 'area', height: 240 }),
+      series: [{ name: '주식 평가액', data: D.stock.map(function (p) { return [p.day, p.krw]; }) }],
+      colors: [PAL[1]],
+      xaxis: { type: 'datetime' },
+      yaxis: { labels: { formatter: function (v) { return (v / 1e8).toFixed(2) + '억'; } } },
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0.03 } },
+      dataLabels: { enabled: false },
+      tooltip: merge(base.tooltip, { x: { format: 'yyyy-MM-dd' }, y: { formatter: function (v) { return won(v) + '원'; } } }),
+    })).render();
+  }
+
+  // 4) 계좌별 규모 (가로 막대)
+  if (D.bars && D.bars.length) {
+    new ApexCharts(document.getElementById('chart-bars'), merge(base, {
+      chart: merge(base.chart, { type: 'bar', height: Math.max(200, D.bars.length * 42) }),
+      series: [{ name: '평가액', data: D.bars.map(function (b) { return b.krw; }) }],
+      colors: [PAL[0]],
+      xaxis: { categories: D.bars.map(function (b) { return b.name; }),
+               labels: { formatter: function (v) { return (v / 1e8).toFixed(1) + '억'; } } },
+      plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '62%' } },
+      dataLabels: { enabled: true, formatter: function (v) { return won(v); },
+                    style: { colors: [dark ? '#e7e9ec' : '#1c1f23'] }, offsetX: 6, textAnchor: 'start' },
+      tooltip: merge(base.tooltip, { y: { formatter: function (v) { return won(v) + '원'; } } }),
+    })).render();
+  }
+})();
+</script>
 
 <script>
 (function () {

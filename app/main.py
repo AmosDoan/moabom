@@ -8,17 +8,19 @@ from __future__ import annotations
 import csv
 import hashlib
 import hmac
+import json
 import os
 import secrets
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from datetime import datetime
 
-from . import charts, db, prices, sheets
+from . import db, prices, sheets
 
 BASE = os.path.dirname(os.path.dirname(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
@@ -45,6 +47,7 @@ def _session_secret() -> str:
 
 app = FastAPI(title="Asset Dashboard")
 app.add_middleware(SessionMiddleware, secret_key=_session_secret(), max_age=60 * 60 * 24 * 14)
+app.mount("/static", StaticFiles(directory=os.path.join(BASE, "static")), name="static")
 
 
 class NotAuthed(Exception):
@@ -186,15 +189,14 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     pct = lambda v: round(v / net_worth * 100, 1) if net_worth else 0
     weights = {"stock_pct": pct(stock_krw), "deposit_pct": pct(deposit_krw), "car_pct": pct(car_krw)}
 
-    # --- charts ---
-    alloc = charts.donut_segments([
+    # --- chart data (rendered client-side by ApexCharts) ---
+    alloc = [
         {"name": "주식", "krw": stock_krw},
         {"name": "예적금", "krw": deposit_krw},
         {"name": "금", "krw": gold_krw},
         {"name": "차량", "krw": car_krw},
         {"name": "현금·기타", "krw": etc_krw},
-    ])
-    # by-account bars: DB accounts + sheet 은행/엔화
+    ]
     bar_items = [{"name": a["account"], "krw": a["mkt_krw"]} for a in data["accounts"]]
     if deposit_krw:
         bar_items.append({"name": "은행 예적금", "krw": deposit_krw})
@@ -202,20 +204,20 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         yen = next((a["krw"] for a in nonstock["assets"] if a["name"] == "엔화"), 0)
         if yen:
             bar_items.append({"name": "엔화", "krw": yen})
-    bar_max = max((b["krw"] for b in bar_items), default=1) or 1
-    for b in bar_items:
-        b["pct"] = round(b["krw"] / bar_max * 100, 1)
     bar_items.sort(key=lambda b: b["krw"], reverse=True)
 
     # net worth history: snapshot today, then read series
     today = datetime.now().strftime("%Y-%m-%d")
     db.record_net_worth(today, net_worth)
     series = db.net_worth_series(120)
-    line = charts.line_geom(series)
+    stock_hist = sheets.get_stock_history() or []
 
-    # 주식 평가액 추이 (구글 시트 Stock 탭 기록)
-    stock_hist = sheets.get_stock_history()
-    stock_line = charts.line_geom(stock_hist) if stock_hist else None
+    chart_data = {
+        "alloc": [a for a in alloc if a["krw"] > 0],
+        "bars": bar_items,
+        "net": series,
+        "stock": stock_hist,
+    }
 
     priced_at_str = (
         datetime.fromtimestamp(data["priced_at"]).strftime("%m-%d %H:%M")
@@ -227,7 +229,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         {"request": request, "d": data, "top": top, "nonstock": nonstock,
          "banks": banks, "net_worth": net_worth, "financial_krw": financial_krw,
          "ex_pension_krw": ex_pension_krw, "car_krw": car_krw, "w": weights,
-         "alloc": alloc, "bars": bar_items, "line": line, "stock_line": stock_line,
+         "chart_data": json.dumps(chart_data, ensure_ascii=False),
          "priced_at": priced_at_str},
     )
 

@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY templates ./templates
+COPY static ./static
 COPY seed_positions.csv .
 
 # data/ is a bind mount (SQLite persists on the host/NAS)
