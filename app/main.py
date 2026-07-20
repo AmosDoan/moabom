@@ -190,12 +190,24 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     weights = {"stock_pct": pct(stock_krw), "deposit_pct": pct(deposit_krw), "car_pct": pct(car_krw)}
 
     # --- chart data (rendered client-side by ApexCharts) ---
+    def by(acc=None, market=None):
+        return sum(
+            r["mkt_krw"] for r in data["rows"]
+            if (acc is None or (r.get("account") or "") == acc)
+            and (market is None or str(r.get("market") or "").upper() == market)
+        )
+
+    yen_krw = next((a["krw"] for a in nonstock["assets"] if a["name"] == "엔화"), 0) if nonstock else 0
+    # 종합매매 = 미국주식 + 국내주식 + 현금(USD); 나머지는 계좌 단위
     alloc = [
-        {"name": "주식", "krw": stock_krw},
+        {"name": "미국주식", "krw": by("종합매매", "US")},
         {"name": "예적금", "krw": deposit_krw},
-        {"name": "금", "krw": gold_krw},
+        {"name": "LY 스옵", "krw": by("스톡옵션")},
         {"name": "차량", "krw": car_krw},
-        {"name": "현금·기타", "krw": etc_krw},
+        {"name": "ISA", "krw": by("ISA")},
+        {"name": "국내주식", "krw": by("종합매매", "KR")},
+        {"name": "금", "krw": gold_krw},
+        {"name": "기타", "krw": pension_krw + by("종합매매", "MANUAL") + yen_krw},
     ]
     bar_items = [{"name": a["account"], "krw": a["mkt_krw"]} for a in data["accounts"]]
     if deposit_krw:

@@ -190,8 +190,8 @@
 (function () {
   var D = JSON.parse(document.getElementById('chart-data').textContent);
   var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  var PAL = dark ? ['#3987e5','#199e70','#c98500','#008300','#9085e9']
-                 : ['#2a78d6','#1baf7a','#eda100','#008300','#4a3aa7'];
+  var PAL = dark ? ['#3987e5','#199e70','#c98500','#008300','#9085e9','#e66767','#d55181','#d95926']
+                 : ['#2a78d6','#1baf7a','#eda100','#008300','#4a3aa7','#e34948','#e87ba4','#eb6834'];
   var ink = dark ? '#c3c2b7' : '#52514e';
   var grid = dark ? '#2c2c2a' : '#e1e0d9';
   var won = function (v) { return new Intl.NumberFormat('ko-KR').format(Math.round(v)); };
@@ -200,13 +200,15 @@
                tooltip: { theme: dark ? 'dark' : 'light' } };
   function merge(a, b) { var o = {}; for (var k in a) o[k] = a[k]; for (var k in b) o[k] = b[k]; return o; }
 
-  // 1) 자산 구성 도넛
+  // 1) 자산 구성 도넛 (색은 카테고리 고정 — 0 슬라이스가 걸러져도 안 밀림)
+  var CATCOL = { '미국주식': PAL[0], '예적금': PAL[1], 'LY 스옵': PAL[2], '차량': PAL[3],
+                 'ISA': PAL[4], '국내주식': PAL[5], '금': PAL[6], '기타': PAL[7] };
   if (D.alloc && D.alloc.length) {
     new ApexCharts(document.getElementById('chart-alloc'), merge(base, {
       chart: merge(base.chart, { type: 'donut', height: 300 }),
       series: D.alloc.map(function (a) { return a.krw; }),
       labels: D.alloc.map(function (a) { return a.name; }),
-      colors: PAL,
+      colors: D.alloc.map(function (a) { return CATCOL[a.name] || '#8a8a8a'; }),
       legend: { position: 'bottom' },
       dataLabels: { formatter: function (v) { return v.toFixed(1) + '%'; } },
       plotOptions: { pie: { donut: { size: '62%', labels: { show: true,
