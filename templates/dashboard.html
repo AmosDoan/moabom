@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block body %}
 {% set won = "{:,.0f}".format %}
-{%- macro price_disp(r) -%}
-  {%- if r.price is none -%}-
-  {%- elif r.currency == 'USD' -%}${{ '%.2f'|format(r.price) }}
-  {%- elif r.currency == 'JPY' -%}¥{{ '%.0f'|format(r.price) }}
-  {%- else -%}{{ '{:,.0f}'.format(r.price) }}원
+{%- macro money(val, cur) -%}
+  {%- if val is none -%}-
+  {%- elif cur == 'USD' -%}${{ '%.2f'|format(val) }}
+  {%- elif cur == 'JPY' -%}¥{{ '%.0f'|format(val) }}
+  {%- else -%}{{ '{:,.0f}'.format(val) }}원
   {%- endif -%}
 {%- endmacro -%}
 <style>
@@ -145,12 +145,13 @@
   </div>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>종목</th><th>현재가</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
+      <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
       <tbody>
       {% for r in a.rows %}
         <tr>
           <td>{{ r.name }}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</td>
-          <td>{{ price_disp(r) }}</td>
+          <td class="muted">{{ money(r.avg_cost, r.currency) }}</td>
+          <td>{{ money(r.price, r.currency) }}</td>
           <td>{{ won(r.mkt_krw) }}</td>
           <td class="{{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">
             {{ ('+' if r.pl_krw >= 0 else '') ~ won(r.pl_krw) if r.pl_krw is not none else '-' }}
