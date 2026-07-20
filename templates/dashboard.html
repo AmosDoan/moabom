@@ -27,18 +27,22 @@
 </style>
 {% if nonstock %}
 <div class="card">
-  <div class="kpis">
+  <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
     <div class="kpi">
       <div class="label">총 순자산</div>
-      <div class="value" style="font-size:24px;">{{ won(net_worth) }}원</div>
+      <div class="value" style="font-size:22px;">{{ won(net_worth) }}원</div>
+    </div>
+    <div class="kpi">
+      <div class="label">연금 제외 자산</div>
+      <div class="value" style="font-size:22px;">{{ won(ex_pension_krw) }}원</div>
     </div>
     <div class="kpi">
       <div class="label">금융자산 (차 제외)</div>
-      <div class="value" style="font-size:24px;">{{ won(financial_krw) }}원</div>
+      <div class="value" style="font-size:22px;">{{ won(financial_krw) }}원</div>
     </div>
     <div class="kpi">
       <div class="label">차량 가치</div>
-      <div class="value" style="font-size:24px;">{{ won(car_krw) }}원</div>
+      <div class="value" style="font-size:22px;">{{ won(car_krw) }}원</div>
     </div>
   </div>
 </div>

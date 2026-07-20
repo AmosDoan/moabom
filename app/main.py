@@ -179,7 +179,9 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     deposit_krw = sum(b["krw"] for b in banks) if banks else 0
     car_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "자동차")
     gold_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "금현물")
+    pension_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "연금저축")
     financial_krw = net_worth - car_krw  # 차 제외 금융자산
+    ex_pension_krw = net_worth - pension_krw  # 연금저축 제외 자산
     etc_krw = max(net_worth - stock_krw - deposit_krw - gold_krw - car_krw, 0)  # 현금·엔화 등
     pct = lambda v: round(v / net_worth * 100, 1) if net_worth else 0
     weights = {"stock_pct": pct(stock_krw), "deposit_pct": pct(deposit_krw), "car_pct": pct(car_krw)}
@@ -220,8 +222,8 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         "dashboard.html",
         {"request": request, "d": data, "top": top, "nonstock": nonstock,
          "banks": banks, "net_worth": net_worth, "financial_krw": financial_krw,
-         "car_krw": car_krw, "w": weights, "alloc": alloc, "bars": bar_items,
-         "line": line, "priced_at": priced_at_str},
+         "ex_pension_krw": ex_pension_krw, "car_krw": car_krw, "w": weights,
+         "alloc": alloc, "bars": bar_items, "line": line, "priced_at": priced_at_str},
     )
 
 
