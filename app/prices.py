@@ -41,6 +41,7 @@ def us_session() -> str:
 
 _CACHE: dict = {}
 _TTL = 30  # seconds (client polls ~30s; keep cache short so polls get fresh data)
+_HIGH_TTL = 3600  # 52주 고가는 거의 안 변하니 1시간 캐시
 
 BUY_DIP_PCT = -3.0  # 전일 대비 이 % 이하로 하락하면 "매수?" 표시 (단순 규칙, 자문 아님)
 
@@ -142,6 +143,51 @@ def _yf_live(tickers: tuple) -> dict:
     return _cached(("live", tickers), _p)
 
 
+def _yf_high(tickers: tuple) -> dict:
+    """52-week high per yfinance ticker (US/JP), long-cached."""
+    if not tickers:
+        return {}
+    now = time.time()
+    hit = _CACHE.get(("high", tickers))
+    if hit and now - hit[0] < _HIGH_TTL:
+        return hit[1]
+    out = {}
+    try:
+        data = yf.download(list(tickers), period="1y", progress=False, group_by="ticker")
+        for t in tickers:
+            high = None
+            try:
+                high = data[t]["High"]
+            except Exception:
+                try:
+                    high = data["High"]
+                except Exception:
+                    high = None
+            try:
+                out[t] = float(high.dropna().max()) if high is not None else None
+            except Exception:
+                out[t] = None
+    except Exception:
+        out = {t: None for t in tickers}
+    _CACHE[("high", tickers)] = (now, out)
+    return out
+
+
+def _kr_high(code: str):
+    """52-week high for a KR code, long-cached."""
+    now = time.time()
+    hit = _CACHE.get(("krhigh", code))
+    if hit and now - hit[0] < _HIGH_TTL:
+        return hit[1]
+    try:
+        h = fdr.DataReader(code)["High"].dropna()
+        val = float(h.iloc[-252:].max())
+    except Exception:
+        val = None
+    _CACHE[("krhigh", code)] = (now, val)
+    return val
+
+
 def _kr_price(code: str) -> dict:
     def _p():
         _touch_fetch()
@@ -178,6 +224,7 @@ def enrich(positions: list[dict]) -> dict:
         if str(p["market"]).upper() == "US" and p.get("ticker")
     }))
     live_map = _yf_live(us_tickers) if (us_ext and us_tickers) else {}
+    high_map = _yf_high(yf_tickers)  # 52주 고가 (US/JP), 1h 캐시
 
     rows = []
     for p in positions:
@@ -219,6 +266,15 @@ def enrich(positions: list[dict]) -> dict:
             chg_pct = None
             buy = False
 
+        # 52-week high (native) + how far current price sits below it
+        if mkt in ("US", "JP"):
+            high = high_map.get(p.get("ticker"))
+        elif mkt == "KR":
+            high = _kr_high(p.get("ticker"))
+        else:
+            high = None
+        from_high_pct = ((price - high) / high * 100) if (price and high) else None
+
         # cost basis: fixed KRW (accurate for foreign holdings incl. FX) takes priority,
         # else derive from shares × avg_cost at current FX
         fixed_krw = p.get("cost_krw")
@@ -247,6 +303,8 @@ def enrich(positions: list[dict]) -> dict:
                 "buy": buy,
                 "live_price": live_price,
                 "live_session": live_session,
+                "high": high,
+                "from_high_pct": (round(from_high_pct, 1) + 0.0) if from_high_pct is not None else None,
             }
         )
 

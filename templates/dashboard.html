@@ -115,7 +115,7 @@
   </div>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>전일대비</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
+      <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>52주 고가</th><th>전일대비</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
       <tbody>
       {% for r in a.rows %}
         <tr data-live-id="{{ r.id }}">
@@ -125,6 +125,7 @@
             <span class="c-price">{{ money(r.price, r.currency) }}</span>
             <div class="c-ext ext">{% if r.live_price %}<span class="tag">{{ r.live_session }}</span>{{ money(r.live_price, r.currency) }}{% endif %}</div>
           </td>
+          <td class="muted">{% if r.high %}{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="tk">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}{% else %}-{% endif %}</td>
           <td class="c-chg {{ 'up' if (r.chg_pct or 0) >= 0 else 'down' }}">{% if r.chg_pct is not none %}{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}{% else %}-{% endif %}</td>
           <td class="c-mkt">{{ won(r.mkt_krw) }}</td>
           <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">
