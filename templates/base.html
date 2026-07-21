@@ -25,7 +25,7 @@
   header nav a:hover { color:var(--ink); }
   main { max-width:960px; margin:0 auto; padding:20px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; }
-  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
   .kpi .label { color:var(--muted); font-size:12px; }
   .kpi .value { font-size:22px; font-weight:700; margin-top:2px; }
   .up { color:var(--up); } .down { color:var(--down); }
@@ -53,6 +53,8 @@
     header h1 { flex-basis:100%; }
     header nav { margin-left:0; gap:14px; flex-wrap:wrap; }
     main { padding:14px; }
+    .kpis { grid-template-columns:1fr 1fr; }
+    .kpi .value { font-size:20px; }
   }
 </style>
 </head>
