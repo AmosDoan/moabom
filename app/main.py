@@ -242,7 +242,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
          "banks": banks, "net_worth": net_worth, "financial_krw": financial_krw,
          "ex_pension_krw": ex_pension_krw, "car_krw": car_krw, "w": weights,
          "chart_data": json.dumps(chart_data, ensure_ascii=False),
-         "priced_at": priced_at_str},
+         "markets": prices.market_status(), "priced_at": priced_at_str},
     )
 
 
@@ -418,6 +418,7 @@ def api_live(user: str = Depends(require_login)):
     tpl = data["total_pl_krw"]
     return {
         "priced_at": priced,
+        "markets": prices.market_status(),
         "total_krw": f'{data["total_krw"]:,}',
         "total_pl": ("+" if tpl >= 0 else "") + f"{tpl:,}",
         "total_up": tpl >= 0,

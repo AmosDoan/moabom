@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block body %}
 {% set won = "{:,.0f}".format %}
+{%- macro mkt_badges(ms) -%}
+  {% for m in ms %}<span class="mkt mkt-{{ m.state }}"><span class="dot"></span>{{ m.flag }} {{ m.name }} <span class="lbl">{{ m.label }}</span></span>{% endfor %}
+{%- endmacro -%}
 {%- macro money(val, cur) -%}
   {%- if val is none -%}-
   {%- elif cur == 'USD' -%}${{ '%.2f'|format(val) }}
@@ -11,6 +14,15 @@
 <style>
   .asof { font-size:12px; color:var(--muted); }
   .tk { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.3px; }
+  .markets { display:flex; gap:8px; flex-wrap:wrap; }
+  .mkt { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+         border:1px solid var(--line); font-size:13px; }
+  .mkt .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+  .mkt .lbl { color:var(--muted); }
+  .mkt-open .dot { background:#0ca30c; box-shadow:0 0 0 3px rgba(12,163,12,.15); }
+  .mkt-open .lbl { color:#0ca30c; font-weight:600; }
+  .mkt-ext  .dot { background:#eab308; box-shadow:0 0 0 3px rgba(234,179,8,.15); }
+  .mkt-ext  .lbl { color:#b8860b; font-weight:600; }
   .ext { font-size:11px; margin-top:2px; white-space:nowrap; }
   .ext .tag { display:inline-block; padding:0 4px; border-radius:4px; font-size:10px;
               background:var(--line); color:var(--muted); margin-right:3px; }
@@ -29,6 +41,10 @@
     table.holdings td .ext { flex-basis:100%; text-align:right; }
   }
 </style>
+
+<div class="card">
+  <div class="markets" id="market-status">{{ mkt_badges(markets) }}</div>
+</div>
 {% if nonstock %}
 <div class="card">
   <div class="kpis">
@@ -302,6 +318,13 @@
       const res = await fetch('/api/live', { headers: { 'Accept': 'application/json' } });
       if (!res.ok) return;
       const d = await res.json();
+      if (d.markets) {
+        var ms = document.getElementById('market-status');
+        if (ms) ms.innerHTML = d.markets.map(function (m) {
+          return '<span class="mkt mkt-' + m.state + '"><span class="dot"></span>' +
+                 m.flag + ' ' + m.name + ' <span class="lbl">' + m.label + '</span></span>';
+        }).join('');
+      }
       setText(document.getElementById('total-krw'), d.total_krw);
       const tp = document.getElementById('total-pl'); setText(tp, d.total_pl + '원'); setSign(tp, d.total_up);
       setText(document.getElementById('fx'), d.fx);

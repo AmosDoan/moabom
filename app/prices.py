@@ -13,8 +13,10 @@ from datetime import datetime, time as dtime
 try:
     from zoneinfo import ZoneInfo
     _ET = ZoneInfo("America/New_York")
+    _KST = ZoneInfo("Asia/Seoul")
+    _JST = ZoneInfo("Asia/Tokyo")
 except Exception:  # pragma: no cover
-    _ET = None
+    _ET = _KST = _JST = None
 
 warnings.filterwarnings("ignore")
 
@@ -38,6 +40,57 @@ def us_session() -> str:
     if dtime(16, 0) <= t < dtime(20, 0):
         return "애프터마켓"
     return "휴장"
+
+
+def kr_session() -> str:
+    """KRX session by Seoul wall clock (holidays not accounted)."""
+    if _KST is None:
+        return "휴장"
+    now = datetime.now(_KST)
+    if now.weekday() >= 5:
+        return "휴장"
+    t = now.time()
+    if dtime(8, 30) <= t < dtime(9, 0):
+        return "장전"
+    if dtime(9, 0) <= t < dtime(15, 30):
+        return "장중"
+    return "장마감"
+
+
+def jp_session() -> str:
+    """TSE session by Tokyo wall clock (lunch break 11:30-12:30)."""
+    if _JST is None:
+        return "휴장"
+    now = datetime.now(_JST)
+    if now.weekday() >= 5:
+        return "휴장"
+    t = now.time()
+    if dtime(9, 0) <= t < dtime(11, 30):
+        return "장중"
+    if dtime(11, 30) <= t < dtime(12, 30):
+        return "점심시간"
+    if dtime(12, 30) <= t < dtime(15, 30):
+        return "장중"
+    return "장마감"
+
+
+def _mkt_state(label: str) -> str:
+    if label == "장중":
+        return "open"
+    if label in ("프리마켓", "애프터마켓", "장전"):
+        return "ext"
+    return "closed"  # 장마감 / 휴장 / 점심시간
+
+
+def market_status() -> list[dict]:
+    raw = [
+        {"name": "국내", "flag": "🇰🇷", "label": kr_session()},
+        {"name": "미국", "flag": "🇺🇸", "label": us_session()},
+        {"name": "일본", "flag": "🇯🇵", "label": jp_session()},
+    ]
+    for m in raw:
+        m["state"] = _mkt_state(m["label"])
+    return raw
 
 _CACHE: dict = {}
 _TTL = 30  # seconds (client polls ~30s; keep cache short so polls get fresh data)
