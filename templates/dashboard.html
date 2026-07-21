@@ -14,6 +14,20 @@
   .ext { font-size:11px; margin-top:2px; white-space:nowrap; }
   .ext .tag { display:inline-block; padding:0 4px; border-radius:4px; font-size:10px;
               background:var(--line); color:var(--muted); margin-right:3px; }
+
+  /* Mobile: stack each holding row into a labeled card (no horizontal scroll) */
+  @media (max-width: 640px) {
+    table.holdings thead { display:none; }
+    table.holdings, table.holdings tbody, table.holdings tr, table.holdings td { display:block; width:100%; }
+    table.holdings tr { border:1px solid var(--line); border-radius:10px; margin-bottom:10px; }
+    table.holdings td { display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px;
+                        text-align:right; border:none; padding:6px 12px; white-space:normal; }
+    table.holdings td::before { content:attr(data-label); color:var(--muted); font-size:12px; text-align:left; }
+    table.holdings td:first-child { font-size:15px; font-weight:700; padding:9px 12px;
+                                    border-bottom:1px solid var(--line); }
+    table.holdings td:first-child::before { content:''; }
+    table.holdings td .ext { flex-basis:100%; text-align:right; }
+  }
 </style>
 {% if nonstock %}
 <div class="card">
@@ -114,27 +128,27 @@
     </span>
   </div>
   <div class="tablewrap">
-    <table>
+    <table class="holdings">
       <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>52주 고가</th><th>전일대비</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
       <tbody>
       {% for r in a.rows %}
         <tr data-live-id="{{ r.id }}">
           <td>{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</td>
-          <td class="muted">{{ money(r.avg_cost, r.currency) }}</td>
-          <td>
+          <td class="muted" data-label="평단">{{ money(r.avg_cost, r.currency) }}</td>
+          <td data-label="현재가">
             <span class="c-price">{{ money(r.price, r.currency) }}</span>
             <div class="c-ext ext">{% if r.live_price %}<span class="tag">{{ r.live_session }}</span>{{ money(r.live_price, r.currency) }}{% endif %}</div>
           </td>
-          <td class="muted">{% if r.high %}{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="tk">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}{% else %}-{% endif %}</td>
-          <td class="c-chg {{ 'up' if (r.chg_pct or 0) >= 0 else 'down' }}">{% if r.chg_pct is not none %}{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}{% else %}-{% endif %}</td>
-          <td class="c-mkt">{{ won(r.mkt_krw) }}</td>
-          <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">
+          <td class="muted" data-label="52주 고가">{% if r.high %}{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="tk">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}{% else %}-{% endif %}</td>
+          <td class="c-chg {{ 'up' if (r.chg_pct or 0) >= 0 else 'down' }}" data-label="전일대비">{% if r.chg_pct is not none %}{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}{% else %}-{% endif %}</td>
+          <td class="c-mkt" data-label="평가액(원)">{{ won(r.mkt_krw) }}</td>
+          <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}" data-label="손익(원)">
             {{ ('+' if r.pl_krw >= 0 else '') ~ won(r.pl_krw) if r.pl_krw is not none else '-' }}
           </td>
-          <td class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">
+          <td class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}" data-label="수익률">
             {{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}
           </td>
-          <td>{{ r.weight }}%</td>
+          <td data-label="비중">{{ r.weight }}%</td>
         </tr>
       {% endfor %}
       </tbody>
