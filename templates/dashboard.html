@@ -145,11 +145,12 @@
   </div>
   <div class="tablewrap">
     <table class="holdings">
-      <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>52주 고가</th><th>전일대비</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
+      <thead><tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>52주 고가</th><th>전일대비</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
       <tbody>
       {% for r in a.rows %}
         <tr data-live-id="{{ r.id }}">
           <td>{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</td>
+          <td data-label="수량">{% if r.shares is not none %}{{ '%g'|format(r.shares) }}{% else %}-{% endif %}</td>
           <td class="muted" data-label="평단">{{ money(r.avg_cost, r.currency) }}</td>
           <td data-label="현재가">
             <span class="c-price">{{ money(r.price, r.currency) }}</span>
