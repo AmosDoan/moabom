@@ -6,6 +6,7 @@ Free data only (no broker API):
 """
 from __future__ import annotations
 
+import threading
 import time
 import warnings
 from datetime import datetime, time as dtime
@@ -110,14 +111,54 @@ def priced_at() -> float | None:
     return _LAST_FETCH["ts"]
 
 
-def _cached(key, producer):
+_REFRESHING: set = set()
+_REFRESH_LOCK = threading.Lock()
+
+
+def _bg_refresh(key, producer):
+    """Refresh one cache key off the request path (stale-while-revalidate)."""
+    with _REFRESH_LOCK:
+        if key in _REFRESHING:
+            return
+        _REFRESHING.add(key)
+
+    def run():
+        try:
+            val = producer()
+            _CACHE[key] = (time.time(), val)
+        except Exception:
+            pass
+        finally:
+            with _REFRESH_LOCK:
+                _REFRESHING.discard(key)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _cached_ttl(key, producer, ttl):
+    """Serve cached value immediately; when older than ttl, return it and refresh
+    in the background. Only a truly cold key (never fetched) blocks the caller."""
     now = time.time()
     hit = _CACHE.get(key)
-    if hit and now - hit[0] < _TTL:
+    if hit is not None:
+        if now - hit[0] >= ttl:
+            _bg_refresh(key, producer)  # stale: refresh async, serve stale now
         return hit[1]
-    val = producer()
+    val = producer()  # cold: unavoidable first-time fetch
     _CACHE[key] = (now, val)
     return val
+
+
+def _cached(key, producer):
+    return _cached_ttl(key, producer, _TTL)
+
+
+def warm(positions):
+    """Prime the price/FX caches so the first page load is instant."""
+    try:
+        enrich(positions)
+    except Exception:
+        pass
 
 
 def get_fx() -> float:
@@ -197,48 +238,43 @@ def _yf_live(tickers: tuple) -> dict:
 
 
 def _yf_high(tickers: tuple) -> dict:
-    """52-week high per yfinance ticker (US/JP), long-cached."""
+    """52-week high per yfinance ticker (US/JP), long-cached (stale-while-revalidate)."""
     if not tickers:
         return {}
-    now = time.time()
-    hit = _CACHE.get(("high", tickers))
-    if hit and now - hit[0] < _HIGH_TTL:
-        return hit[1]
-    out = {}
-    try:
-        data = yf.download(list(tickers), period="1y", progress=False, group_by="ticker")
-        for t in tickers:
-            high = None
-            try:
-                high = data[t]["High"]
-            except Exception:
+
+    def _p():
+        out = {}
+        try:
+            data = yf.download(list(tickers), period="1y", progress=False, group_by="ticker")
+            for t in tickers:
+                high = None
                 try:
-                    high = data["High"]
+                    high = data[t]["High"]
                 except Exception:
-                    high = None
-            try:
-                out[t] = float(high.dropna().max()) if high is not None else None
-            except Exception:
-                out[t] = None
-    except Exception:
-        out = {t: None for t in tickers}
-    _CACHE[("high", tickers)] = (now, out)
-    return out
+                    try:
+                        high = data["High"]
+                    except Exception:
+                        high = None
+                try:
+                    out[t] = float(high.dropna().max()) if high is not None else None
+                except Exception:
+                    out[t] = None
+        except Exception:
+            out = {t: None for t in tickers}
+        return out
+
+    return _cached_ttl(("high", tickers), _p, _HIGH_TTL)
 
 
 def _kr_high(code: str):
-    """52-week high for a KR code, long-cached."""
-    now = time.time()
-    hit = _CACHE.get(("krhigh", code))
-    if hit and now - hit[0] < _HIGH_TTL:
-        return hit[1]
-    try:
-        h = fdr.DataReader(code)["High"].dropna()
-        val = float(h.iloc[-252:].max())
-    except Exception:
-        val = None
-    _CACHE[("krhigh", code)] = (now, val)
-    return val
+    """52-week high for a KR code, long-cached (stale-while-revalidate)."""
+    def _p():
+        try:
+            h = fdr.DataReader(code)["High"].dropna()
+            return float(h.iloc[-252:].max())
+        except Exception:
+            return None
+    return _cached_ttl(("krhigh", code), _p, _HIGH_TTL)
 
 
 def _kr_price(code: str) -> dict:

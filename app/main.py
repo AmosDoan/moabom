@@ -165,6 +165,10 @@ def seed_if_empty():
 
 seed_if_empty()
 
+# Warm the price cache at startup (off the request path) so the first load is instant.
+import threading as _threading
+_threading.Thread(target=lambda: prices.warm(db.all_positions()), daemon=True).start()
+
 
 @app.get("/")
 def dashboard(request: Request, user: str = Depends(require_login)):
