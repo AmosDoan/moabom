@@ -181,9 +181,31 @@ def _warm_all():
 _threading.Thread(target=_warm_all, daemon=True).start()
 
 
+def _split_accounts(accounts, total_krw):
+    """Display-only: split 종합매매 into 국내주식 / 해외주식 groups (raw data unchanged)."""
+    out = []
+    for a in accounts:
+        if a["account"] != "종합매매":
+            out.append(a)
+            continue
+        kr = [r for r in a["rows"] if str(r.get("market") or "").upper() == "KR"]
+        ov = [r for r in a["rows"] if str(r.get("market") or "").upper() != "KR"]
+        for label, rows_ in (("종합매매 · 국내주식", kr), ("종합매매 · 해외주식", ov)):
+            if not rows_:
+                continue
+            mkt = sum(r["mkt_krw"] for r in rows_)
+            pl = sum(r["pl_krw"] for r in rows_ if r["pl_krw"] is not None)
+            out.append({
+                "account": label, "rows": rows_, "mkt_krw": mkt, "pl_krw": pl,
+                "weight": round(mkt / total_krw * 100, 1) if total_krw else 0,
+            })
+    return out
+
+
 @app.get("/")
 def dashboard(request: Request, user: str = Depends(require_login)):
     data = prices.enrich(db.all_positions())
+    account_groups = _split_accounts(data["accounts"], data["total_krw"])
     top = sorted(data["rows"], key=lambda r: r["mkt_krw"], reverse=True)[:8]
     nonstock = sheets.get_nonstock()  # None until Google 시트 연동됨
     banks = sheets.get_banks()
@@ -274,9 +296,10 @@ def dashboard(request: Request, user: str = Depends(require_login)):
 
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "d": data, "top": top, "nonstock": nonstock,
-         "banks": banks, "net_worth": net_worth, "financial_krw": financial_krw,
-         "ex_pension_krw": ex_pension_krw, "car_krw": car_krw, "w": weights,
+        {"request": request, "d": data, "account_groups": account_groups, "top": top,
+         "nonstock": nonstock, "banks": banks, "net_worth": net_worth,
+         "financial_krw": financial_krw, "ex_pension_krw": ex_pension_krw,
+         "car_krw": car_krw, "w": weights,
          "chart_data": json.dumps(chart_data, ensure_ascii=False),
          "markets": prices.market_status(), "priced_at": priced_at_str},
     )
