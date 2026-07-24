@@ -163,7 +163,7 @@
       {% for r in rows %}
         <tr class="hrow" data-live-id="{{ r.id }}">
           <td class="hname">{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}<span class="exp">▾</span></td>
-          <td class="c-price">{{ money(r.price, r.currency) }}</td>
+          <td class="hc-price"><span class="c-price">{{ money(r.price, r.currency) }}</span>{% if r.chg_pct is not none %} <span class="c-chg {{ 'up' if r.chg_pct >= 0 else 'down' }}">({{ '+' if r.chg_pct >= 0 else '' }}{{ '%.1f'|format(r.chg_pct) }}%){% if r.buy %}🛒{% endif %}</span>{% endif %}</td>
           <td class="c-mkt">{{ '{:,.0f}'.format(r.mkt_krw) }}</td>
           <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw)) if r.pl_krw is not none else '-' }}</td>
           <td class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}</td>
@@ -174,7 +174,6 @@
               {% if r.shares is not none %}<div class="kv"><span class="k">수량</span><span class="v">{{ '%g'|format(r.shares) }}주</span></div>{% endif %}
               {% if r.avg_cost is not none %}<div class="kv"><span class="k">평단</span><span class="v">{{ money(r.avg_cost, r.currency) }}</span></div>{% endif %}
               {% if r.high %}<div class="kv"><span class="k">52주고</span><span class="v">{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="muted">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}</span></div>{% endif %}
-              {% if r.chg_pct is not none %}<div class="kv"><span class="k">전일대비</span><span class="v {{ 'up' if r.chg_pct >= 0 else 'down' }}">{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}</span></div>{% endif %}
               <div class="kv"><span class="k">비중</span><span class="v">{{ r.weight }}%</span></div>
             </div>
           </td>

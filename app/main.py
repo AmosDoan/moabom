@@ -522,7 +522,7 @@ def api_live(user: str = Depends(require_login)):
     for r in data["rows"]:
         pl = r["pl_krw"]
         chg = r["chg_pct"]
-        chg_str = (("▲" if chg >= 0 else "▼") + f"{abs(chg):.1f}%" + (" 🛒" if r["buy"] else "")) if chg is not None else "-"
+        chg_str = (("(" + ("+" if chg >= 0 else "") + f"{chg:.1f}%)") + ("🛒" if r["buy"] else "")) if chg is not None else ""
         ext = ""
         if r.get("live_price"):
             ext = r["live_session"] + " " + _money(r["live_price"], r["currency"])
