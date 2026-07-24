@@ -10,9 +10,15 @@
     --bg:#f6f7f9; --card:#fff; --ink:#1c1f23; --muted:#6b7280; --line:#e5e7eb;
     --up:#d92d20; --down:#1d68d9; --accent:#111827;
   }
+  :root[data-theme="dark"] {
+    --bg:#0f1216; --card:#171b21; --ink:#e7e9ec; --muted:#9aa3af; --line:#262c34;
+    --up:#ff6b5e; --down:#5b9bff; --accent:#e7e9ec;
+  }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#0f1216; --card:#171b21; --ink:#e7e9ec; --muted:#9aa3af; --line:#262c34;
-            --up:#ff6b5e; --down:#5b9bff; --accent:#e7e9ec; }
+    :root:not([data-theme="light"]) {
+      --bg:#0f1216; --card:#171b21; --ink:#e7e9ec; --muted:#9aa3af; --line:#262c34;
+      --up:#ff6b5e; --down:#5b9bff; --accent:#e7e9ec;
+    }
   }
   * { box-sizing:border-box; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
@@ -71,8 +77,12 @@
   #priv-toggle { cursor:pointer; }
 </style>
 <script>
-  // Apply saved privacy state before paint (no flash).
-  try { if (localStorage.getItem('asset-privacy') === '1') document.documentElement.classList.add('priv-on'); } catch (e) {}
+  // Apply saved privacy + theme before paint (no flash).
+  try {
+    if (localStorage.getItem('asset-privacy') === '1') document.documentElement.classList.add('priv-on');
+    var t = localStorage.getItem('asset-theme');
+    if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
 </script>
 </head>
 <body>
@@ -96,6 +106,7 @@
     <a href="/positions">종목 관리</a>
     <a href="/log">변경 로그</a>
     <a href="/password">비밀번호</a>
+    <a href="#" id="theme-toggle" title="다크/라이트 전환">🌙</a>
     <a href="#" id="priv-toggle">🙈 비공개</a>
     <a href="/logout">로그아웃</a>
   </nav>
@@ -118,6 +129,24 @@
       try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
       apply(on);
     });
+  })();
+
+  (function () {
+    function effective() {
+      return document.documentElement.getAttribute('data-theme')
+        || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    }
+    var t = document.getElementById('theme-toggle');
+    if (t) {
+      t.textContent = effective() === 'dark' ? '🌙' : '☀️';
+      t.addEventListener('click', function (e) {
+        e.preventDefault();
+        var next = effective() === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem('asset-theme', next); } catch (e) {}
+        document.documentElement.setAttribute('data-theme', next);
+        location.reload();  // re-render charts with the new theme
+      });
+    }
   })();
 </script>
 </body>

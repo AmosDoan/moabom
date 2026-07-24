@@ -78,7 +78,8 @@
 (function () {
   var H = JSON.parse(document.getElementById('st-hist').textContent);
   if (!H || H.length < 2) { document.getElementById('st-chart-empty').style.display = 'block'; return; }
-  var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var _dt = document.documentElement.getAttribute('data-theme');
+  var dark = _dt ? _dt === 'dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   var accent = dark ? '#3987e5' : '#2a78d6';
   var up = H[H.length - 1].close >= H[0].close;
   var col = up ? (dark ? '#ff6b5e' : '#d92d20') : (dark ? '#5b9bff' : '#1d68d9');
