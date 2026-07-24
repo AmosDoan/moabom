@@ -43,10 +43,10 @@
   tr.hdetail { display:none; }
   tr.hdetail.open { display:table-row; }
   tr.hdetail > td { background:var(--bg); border-bottom:1px solid var(--line); }
-  .detail-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px 16px; }
-  .detail-grid .kv { display:flex; justify-content:space-between; gap:8px; }
-  .detail-grid .k { color:var(--muted); font-size:12px; }
-  .detail-grid .v { font-size:13px; font-variant-numeric:tabular-nums; }
+  .detail-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:10px 14px; }
+  .detail-grid .kv { display:flex; flex-direction:column; gap:2px; padding:2px 0; }
+  .detail-grid .k { color:var(--muted); font-size:11px; }
+  .detail-grid .v { font-size:14px; font-variant-numeric:tabular-nums; }
   .subhead { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
              margin:14px 2px 4px; padding-top:8px; font-weight:700; font-size:13px; border-top:1px dashed var(--line); }
   .subhead .v { font-size:12px; font-weight:600; color:var(--muted); }
