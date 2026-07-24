@@ -27,24 +27,27 @@
   .ext .tag { display:inline-block; padding:0 4px; border-radius:4px; font-size:10px;
               background:var(--line); color:var(--muted); margin-right:3px; }
 
-  /* Holding cards: one labeled card per stock (나무 앱 스타일), no horizontal scroll */
-  .hcards { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
-  .hcard { border:1px solid var(--line); border-radius:10px; padding:11px 13px; }
-  .hcard-top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
-  .hcard-name { font-weight:700; font-size:15px; }
-  .hcard-name .tk { font-size:11px; }
-  .hcard-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:6px 16px; }
-  .kv { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
-        border-bottom:1px dotted var(--line); padding-bottom:3px; }
-  .kv .k { color:var(--muted); font-size:12px; }
-  .kv .v { font-size:13.5px; font-variant-numeric:tabular-nums; text-align:right; }
+  /* Holdings: essential columns, click a row to expand details */
+  table.holdings { width:100%; border-collapse:collapse; }
+  table.holdings th, table.holdings td { padding:9px 8px; white-space:nowrap; text-align:right; }
+  table.holdings th { font-size:12px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--axis); }
+  table.holdings th:first-child, table.holdings td:first-child { text-align:left; }
+  table.holdings .c-price, table.holdings .c-mkt, table.holdings .c-pl, table.holdings .c-pct { font-variant-numeric:tabular-nums; }
+  tr.hrow { cursor:pointer; border-bottom:1px solid var(--line); }
+  tr.hrow:hover { background:var(--bg); }
+  tr.hrow td { border-bottom:1px solid var(--line); }
+  .hname .exp { color:var(--muted); font-size:10px; margin-left:5px; display:inline-block; transition:transform .15s; }
+  tr.hrow.open .exp { transform:rotate(180deg); }
+  tr.hdetail { display:none; }
+  tr.hdetail.open { display:table-row; }
+  tr.hdetail > td { background:var(--bg); border-bottom:1px solid var(--line); }
+  .detail-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px 16px; }
+  .detail-grid .kv { display:flex; justify-content:space-between; gap:8px; }
+  .detail-grid .k { color:var(--muted); font-size:12px; }
+  .detail-grid .v { font-size:13px; font-variant-numeric:tabular-nums; }
   .subhead { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
              margin:14px 2px 4px; padding-top:8px; font-weight:700; font-size:13px; border-top:1px dashed var(--line); }
   .subhead .v { font-size:12px; font-weight:600; color:var(--muted); }
-  @media (max-width: 420px) {
-    .hcard-grid { grid-template-columns:1fr 1fr; gap:6px 12px; }
-    .kv .v { font-size:12.5px; }
-  }
 </style>
 
 <div class="card">
@@ -150,30 +153,35 @@
   {% endfor %}
 </div>
 
-{% macro kv(label, value, cls='') %}
-  <div class="kv"><span class="k">{{ label }}</span><span class="v {{ cls }}">{{ value|safe }}</span></div>
-{% endmacro %}
-
 {% macro htable(rows) %}
-  <div class="hcards">
-  {% for r in rows %}
-    <div class="hcard" data-live-id="{{ r.id }}">
-      <div class="hcard-top">
-        <span class="hcard-name">{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</span>
-        {% if r.chg_pct is not none %}<span class="c-chg {{ 'up' if r.chg_pct >= 0 else 'down' }}">{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}</span>{% endif %}
-      </div>
-      <div class="hcard-grid">
-        {% if r.shares is not none %}{{ kv('수량', '%g'|format(r.shares) ~ '주') }}{% endif %}
-        {% if r.avg_cost is not none %}{{ kv('평단', money(r.avg_cost, r.currency)) }}{% endif %}
-        {% if r.price is not none %}{{ kv('현재가', money(r.price, r.currency), 'c-price') }}{% endif %}
-        {% if r.high %}<div class="kv"><span class="k">52주고</span><span class="v">{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="muted">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}</span></div>{% endif %}
-        <div class="kv"><span class="k">평가액</span><span class="v"><span class="c-mkt">{{ '{:,.0f}'.format(r.mkt_krw) }}</span>원</span></div>
-        {{ kv('비중', r.weight ~ '%') }}
-        {% if r.pl_krw is not none %}<div class="kv"><span class="k">손익</span><span class="v"><span class="c-pl {{ 'up' if r.pl_krw >= 0 else 'down' }}">{{ ('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw) }}</span>원</span></div>{% endif %}
-        {% if r.pl_pct is not none %}{{ kv('수익률', ('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%', 'c-pct ' ~ ('up' if r.pl_pct >= 0 else 'down')) }}{% endif %}
-      </div>
-    </div>
-  {% endfor %}
+  <div class="tablewrap">
+    <table class="holdings">
+      <thead><tr>
+        <th>종목</th><th>현재가</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th>
+      </tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr class="hrow" data-live-id="{{ r.id }}">
+          <td class="hname">{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}<span class="exp">▾</span></td>
+          <td class="c-price">{{ money(r.price, r.currency) }}</td>
+          <td class="c-mkt">{{ '{:,.0f}'.format(r.mkt_krw) }}</td>
+          <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw)) if r.pl_krw is not none else '-' }}</td>
+          <td class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}</td>
+        </tr>
+        <tr class="hdetail">
+          <td colspan="5">
+            <div class="detail-grid">
+              {% if r.shares is not none %}<div class="kv"><span class="k">수량</span><span class="v">{{ '%g'|format(r.shares) }}주</span></div>{% endif %}
+              {% if r.avg_cost is not none %}<div class="kv"><span class="k">평단</span><span class="v">{{ money(r.avg_cost, r.currency) }}</span></div>{% endif %}
+              {% if r.high %}<div class="kv"><span class="k">52주고</span><span class="v">{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="muted">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}</span></div>{% endif %}
+              {% if r.chg_pct is not none %}<div class="kv"><span class="k">전일대비</span><span class="v {{ 'up' if r.chg_pct >= 0 else 'down' }}">{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}</span></div>{% endif %}
+              <div class="kv"><span class="k">비중</span><span class="v">{{ r.weight }}%</span></div>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 {% endmacro %}
 
@@ -405,6 +413,20 @@
     } catch (e) { /* keep last values on transient error */ }
   }
   setInterval(live, 30000);
+})();
+</script>
+
+<script>
+// Click a holding row to expand/collapse its detail row.
+(function () {
+  document.querySelectorAll('tr.hrow').forEach(function (row) {
+    row.addEventListener('click', function () {
+      var d = row.nextElementSibling;
+      if (!d || !d.classList.contains('hdetail')) return;
+      var open = d.classList.toggle('open');
+      row.classList.toggle('open', open);
+    });
+  });
 })();
 </script>
 
