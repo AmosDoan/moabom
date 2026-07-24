@@ -27,22 +27,25 @@
   .ext .tag { display:inline-block; padding:0 4px; border-radius:4px; font-size:10px;
               background:var(--line); color:var(--muted); margin-right:3px; }
 
-  table.holdings tfoot .total-row td { font-weight:700; border-top:2px solid var(--axis); padding-top:9px; }
-
-  /* Mobile: stack each holding row into a labeled card (no horizontal scroll) */
-  @media (max-width: 640px) {
-    table.holdings thead { display:none; }
-    table.holdings, table.holdings tbody, table.holdings tfoot, table.holdings tr, table.holdings td { display:block; width:100%; }
-    table.holdings tr { border:1px solid var(--line); border-radius:10px; margin-bottom:10px; }
-    table.holdings td { display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px;
-                        text-align:right; border:none; padding:6px 12px; white-space:normal; }
-    table.holdings td::before { content:attr(data-label); color:var(--muted); font-size:12px; text-align:left; }
-    table.holdings td:first-child { font-size:15px; font-weight:700; padding:9px 12px;
-                                    border-bottom:1px solid var(--line); }
-    table.holdings td:first-child::before { content:''; }
-    table.holdings td .ext { flex-basis:100%; text-align:right; }
-    table.holdings tfoot .total-row td.blank-m { display:none; }
-    table.holdings tfoot .total-row { border:1px solid var(--axis); }
+  /* Compact holdings: 4 columns, secondary metrics stacked — fits phones, no h-scroll */
+  table.holdings.compact { width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.holdings.compact td { padding:8px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .hc-name { text-align:left; width:34%; overflow:hidden; }
+  .hc-price, .hc-val, .hc-pl { text-align:right; white-space:nowrap; }
+  .holdings.compact .nm { font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .holdings.compact .nm .tk { font-size:10px; }
+  .holdings.compact .sub { font-size:11px; color:var(--muted); margin-top:2px; white-space:nowrap;
+                           overflow:hidden; text-overflow:ellipsis; }
+  .holdings.compact .c-price, .holdings.compact .c-mkt, .holdings.compact .c-pl {
+    font-size:13px; font-variant-numeric:tabular-nums; }
+  .holdings.compact .c-pct { font-weight:600; }
+  .subhead { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+             margin:14px 2px 0; padding-top:8px; font-weight:700; font-size:13px; border-top:1px dashed var(--line); }
+  .subhead .v { font-size:12px; font-weight:600; color:var(--muted); }
+  @media (max-width: 420px) {
+    .holdings.compact .nm { font-size:12.5px; }
+    .holdings.compact .c-price, .holdings.compact .c-mkt, .holdings.compact .c-pl { font-size:12px; }
+    table.holdings.compact td { padding:8px 2px; }
   }
 </style>
 
@@ -149,6 +152,35 @@
   {% endfor %}
 </div>
 
+{% macro htable(rows) %}
+    <table class="holdings compact">
+      <tbody>
+      {% for r in rows %}
+        <tr data-live-id="{{ r.id }}">
+          <td class="hc-name">
+            <div class="nm">{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}</div>
+            <div class="sub">{% if r.shares is not none %}{{ '%g'|format(r.shares) }}주{% endif %}{% if r.avg_cost is not none %} · 평 {{ money(r.avg_cost, r.currency) }}{% endif %}</div>
+          </td>
+          <td class="hc-price">
+            <div class="c-price">{{ money(r.price, r.currency) }}</div>
+            <div class="sub">
+              {% if r.chg_pct is not none %}<span class="c-chg {{ 'up' if r.chg_pct >= 0 else 'down' }}">{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%</span>{% endif %}{% if r.buy %} 🛒{% endif %}{% if r.from_high_pct is not none %} <span class="muted">고{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}
+            </div>
+          </td>
+          <td class="hc-val">
+            <div class="c-mkt">{{ '{:,.0f}'.format(r.mkt_krw) }}</div>
+            <div class="sub">{{ r.weight }}%</div>
+          </td>
+          <td class="hc-pl">
+            <div class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw)) if r.pl_krw is not none else '-' }}</div>
+            <div class="sub c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '' }}</div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+{% endmacro %}
+
 {% for a in account_groups %}
 <div class="card">
   <div class="acc-head">
@@ -157,43 +189,15 @@
       <span class="{{ 'up' if a.pl_krw >= 0 else 'down' }}">{{ '+' if a.pl_krw >= 0 else '' }}{{ won(a.pl_krw) }}원</span>
     </span>
   </div>
-  <div class="tablewrap">
-    <table class="holdings">
-      <thead><tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>52주 고가</th><th>전일대비</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th><th>비중</th></tr></thead>
-      <tbody>
-      {% for r in a.rows %}
-        <tr data-live-id="{{ r.id }}">
-          <td>{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}</td>
-          <td data-label="수량">{% if r.shares is not none %}{{ '%g'|format(r.shares) }}{% else %}-{% endif %}</td>
-          <td class="muted" data-label="평단">{{ money(r.avg_cost, r.currency) }}</td>
-          <td data-label="현재가">
-            <span class="c-price">{{ money(r.price, r.currency) }}</span>
-            <div class="c-ext ext">{% if r.live_price %}<span class="tag">{{ r.live_session }}</span>{{ money(r.live_price, r.currency) }}{% endif %}</div>
-          </td>
-          <td class="muted" data-label="52주 고가">{% if r.high %}{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="tk">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}{% else %}-{% endif %}</td>
-          <td class="c-chg {{ 'up' if (r.chg_pct or 0) >= 0 else 'down' }}" data-label="전일대비">{% if r.chg_pct is not none %}{{ '▲' if r.chg_pct >= 0 else '▼' }}{{ '%.1f'|format(r.chg_pct if r.chg_pct >= 0 else -r.chg_pct) }}%{% if r.buy %} 🛒{% endif %}{% else %}-{% endif %}</td>
-          <td class="c-mkt" data-label="평가액(원)">{{ won(r.mkt_krw) }}</td>
-          <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}" data-label="손익(원)">
-            {{ ('+' if r.pl_krw >= 0 else '') ~ won(r.pl_krw) if r.pl_krw is not none else '-' }}
-          </td>
-          <td class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}" data-label="수익률">
-            {{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}
-          </td>
-          <td data-label="비중">{{ r.weight }}%</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr class="total-row">
-          <td colspan="6">합계</td>
-          <td data-label="평가액 합계">{{ won(a.mkt_krw) }}</td>
-          <td class="{{ 'up' if a.pl_krw >= 0 else 'down' }}" data-label="손익 합계">{{ '+' if a.pl_krw >= 0 else '' }}{{ won(a.pl_krw) }}</td>
-          <td class="blank-m"></td>
-          <td data-label="비중">{{ a.weight }}%</td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
+  {% for g in a.groups %}
+    {% if g.label %}
+    <div class="subhead">
+      <span>{{ g.label }}</span>
+      <span class="v">{{ won(g.mkt_krw) }}원{% if g.pl_krw is not none %} · <span class="{{ 'up' if g.pl_krw >= 0 else 'down' }}">{{ '+' if g.pl_krw >= 0 else '' }}{{ won(g.pl_krw) }}</span>{% endif %}</span>
+    </div>
+    {% endif %}
+    {{ htable(g.rows) }}
+  {% endfor %}
 </div>
 {% endfor %}
 
@@ -408,48 +412,4 @@
 })();
 </script>
 
-<script>
-// Click a column header to sort that table. Handles currency/sign/arrow cells.
-(function () {
-  function num(s) {
-    s = String(s).replace(/▲/g, '').replace(/▼/g, '-').replace(/🛒/g, '').replace(/[^0-9.\-]/g, '');
-    if (s === '' || s === '-') return null;
-    var v = parseFloat(s);
-    return isNaN(v) ? null : v;
-  }
-  function cell(td) { return td ? (td.textContent || '').trim() : ''; }
-
-  document.querySelectorAll('.tablewrap table').forEach(function (table) {
-    var ths = table.querySelectorAll('thead th');
-    ths.forEach(function (th, idx) {
-      th.style.cursor = 'pointer';
-      th.style.userSelect = 'none';
-      th.addEventListener('click', function () {
-        var tbody = table.querySelector('tbody');
-        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-        var asc = th.getAttribute('data-asc') !== 'true';
-        ths.forEach(function (o) {
-          o.removeAttribute('data-asc');
-          var i = o.querySelector('.sort-ind'); if (i) i.remove();
-        });
-        th.setAttribute('data-asc', asc);
-        rows.sort(function (a, b) {
-          var av = cell(a.children[idx]), bv = cell(b.children[idx]);
-          var an = num(av), bn = num(bv), cmp;
-          if (an === null && bn === null) cmp = av.localeCompare(bv, 'ko');
-          else if (an === null) return 1;   // empty/dash rows always last
-          else if (bn === null) return -1;
-          else cmp = an - bn;
-          return asc ? cmp : -cmp;
-        });
-        rows.forEach(function (r) { tbody.appendChild(r); });
-        var ind = document.createElement('span');
-        ind.className = 'sort-ind'; ind.style.color = 'var(--muted)';
-        ind.textContent = asc ? ' ▲' : ' ▼';
-        th.appendChild(ind);
-      });
-    });
-  });
-})();
-</script>
 {% endblock %}
