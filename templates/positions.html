@@ -21,6 +21,7 @@
           <td>{{ r.shares if r.shares is not none else '-' }}</td>
           <td>{{ r.avg_cost if r.avg_cost is not none else '-' }}</td>
           <td>
+            {% if r.ticker %}<a class="btn primary" href="/positions/{{ r.id }}/trade">거래</a>{% endif %}
             <a class="btn" href="/positions/{{ r.id }}/edit">수정</a>
             <form class="inline" method="post" action="/positions/{{ r.id }}/delete"
                   onsubmit="return confirm('삭제할까요?');">

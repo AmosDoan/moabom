@@ -328,6 +328,72 @@ def remove(pid: int, user: str = Depends(require_login)):
     return RedirectResponse("/positions", status_code=303)
 
 
+@app.get("/positions/{pid}/trade")
+def trade_form(request: Request, pid: int, user: str = Depends(require_login)):
+    p = db.get_position(pid)
+    if not p:
+        raise HTTPException(404)
+    return templates.TemplateResponse(
+        "trade.html", {"request": request, "p": p, "error": None}
+    )
+
+
+@app.post("/positions/{pid}/trade")
+def trade(
+    request: Request,
+    pid: int,
+    user: str = Depends(require_login),
+    side: str = Form(...),      # 매수 | 매도
+    qty: str = Form(...),
+    price: str = Form(...),
+):
+    p = db.get_position(pid)
+    if not p:
+        raise HTTPException(404)
+
+    def fail(msg):
+        return templates.TemplateResponse(
+            "trade.html", {"request": request, "p": p, "error": msg}, status_code=400
+        )
+
+    q = _num(qty)
+    px = _num(price)
+    if not q or q <= 0 or px is None or px < 0:
+        return fail("수량과 가격을 올바르게 입력해 주세요.")
+
+    old_sh = p.get("shares") or 0
+    old_avg = p.get("avg_cost") or 0
+    old_ck = p.get("cost_krw")
+    cur = str(p.get("currency") or "KRW").upper()
+
+    if side == "매수":
+        new_sh = old_sh + q
+        # weighted-average cost in the position's native currency
+        new_avg = (old_sh * old_avg + q * px) / new_sh if new_sh else px
+        # fixed KRW cost basis (if used): add this trade's KRW cost at current FX
+        fx = prices.get_fx() if cur == "USD" else (prices.get_fx_jpy() if cur == "JPY" else 1)
+        new_ck = (old_ck + q * px * fx) if old_ck is not None else None
+        detail = (f"{_money(px, cur)} × {q:g}주 매수 → "
+                  f"수량 {old_sh:g}→{new_sh:g}, 평단 {_money(old_avg, cur)}→{_money(new_avg, cur)}")
+    elif side == "매도":
+        if q > old_sh:
+            return fail(f"보유 수량({old_sh:g})보다 많이 팔 수 없습니다.")
+        new_sh = old_sh - q
+        new_avg = old_avg  # 평단은 매도로 바뀌지 않음
+        # reduce fixed KRW basis pro-rata
+        new_ck = (old_ck * new_sh / old_sh) if (old_ck is not None and old_sh) else old_ck
+        detail = (f"{_money(px, cur)} × {q:g}주 매도 → "
+                  f"수량 {old_sh:g}→{new_sh:g} (평단 {_money(new_avg, cur)} 유지)")
+    else:
+        return fail("매수 또는 매도를 선택해 주세요.")
+
+    db.upsert_position(
+        {**p, "shares": new_sh, "avg_cost": new_avg, "cost_krw": new_ck}, pid=pid
+    )
+    db.add_log(side, p.get("account", ""), p.get("name", ""), detail)
+    return RedirectResponse("/positions", status_code=303)
+
+
 @app.get("/log")
 def change_log(request: Request, user: str = Depends(require_login)):
     return templates.TemplateResponse(

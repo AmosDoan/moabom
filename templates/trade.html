@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}거래 입력{% endblock %}
+{% block body %}
+{%- macro money(val, cur) -%}
+  {%- if val is none -%}-
+  {%- elif cur == 'USD' -%}${{ '%.2f'|format(val) }}
+  {%- elif cur == 'JPY' -%}¥{{ '%.0f'|format(val) }}
+  {%- else -%}{{ '{:,.0f}'.format(val) }}원
+  {%- endif -%}
+{%- endmacro -%}
+<div class="card" style="max-width:460px;">
+  <div class="acc-head">
+    <span class="n">거래 입력 · {{ p.name }}</span>
+    <span class="v">{{ p.account }}</span>
+  </div>
+  <p class="muted" style="margin:2px 0 14px;">
+    현재 보유 <b>{{ '%g'|format(p.shares) if p.shares is not none else '-' }}</b>주 ·
+    평단 <b>{{ money(p.avg_cost, p.currency) }}</b>
+    {% if p.ticker %}· {{ p.ticker }}{% endif %}
+  </p>
+  <form method="post" action="/positions/{{ p.id }}/trade">
+    <label>구분</label>
+    <select name="side">
+      <option value="매수">매수 (샀어요)</option>
+      <option value="매도">매도 (팔았어요)</option>
+    </select>
+    <div class="grid2">
+      <div>
+        <label>수량</label>
+        <input name="qty" inputmode="decimal" placeholder="예: 2" required>
+      </div>
+      <div>
+        <label>체결가 <span class="muted">({{ p.currency }} 기준)</span></label>
+        <input name="price" inputmode="decimal" placeholder="예: {{ '283.85' if p.currency == 'USD' else '68000' }}" required>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:12px;">
+      매수하면 가중평균으로 평단·수량을 자동 계산하고, 매도하면 수량만 줄입니다 (평단 유지).
+      변경 로그에도 거래로 기록됩니다.
+    </p>
+    {% if error %}<p style="color:var(--down); font-size:13px;">{{ error }}</p>{% endif %}
+    <div style="margin-top:14px; display:flex; gap:10px;">
+      <button class="btn primary" type="submit">거래 반영</button>
+      <a class="btn" href="/positions">취소</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
