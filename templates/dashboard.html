@@ -36,6 +36,8 @@
   tr.hrow { cursor:pointer; border-bottom:1px solid var(--line); }
   tr.hrow:hover { background:var(--bg); }
   tr.hrow td { border-bottom:1px solid var(--line); }
+  .hname .slink { color:inherit; text-decoration:none; border-bottom:1px dotted var(--muted); }
+  .hname .slink:hover { color:var(--accent); }
   .hname .exp { color:var(--muted); font-size:10px; margin-left:5px; display:inline-block; transition:transform .15s; }
   tr.hrow.open .exp { transform:rotate(180deg); }
   tr.hdetail { display:none; }
@@ -167,7 +169,7 @@
       <tbody>
       {% for r in rows %}
         <tr class="hrow" data-live-id="{{ r.id }}">
-          <td class="hname">{{ r.name }}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}<span class="exp">▾</span></td>
+          <td class="hname">{% if r.ticker %}<a href="/stock/{{ r.id }}" class="slink" onclick="event.stopPropagation()">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}<span class="exp">▾</span></td>
           <td class="hc-price"><span class="c-price">{{ money(r.price, r.currency) }}</span>{% if r.chg_pct is not none %} <span class="c-chg {{ 'up' if r.chg_pct >= 0 else 'down' }}">({{ '+' if r.chg_pct >= 0 else '' }}{{ '%.1f'|format(r.chg_pct) }}%){% if r.buy %}🛒{% endif %}</span>{% endif %}</td>
           <td class="c-mkt">{{ '{:,.0f}'.format(r.mkt_krw) }}</td>
           <td class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw)) if r.pl_krw is not none else '-' }}</td>

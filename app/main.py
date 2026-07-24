@@ -449,6 +449,23 @@ def trade(
     return RedirectResponse("/positions", status_code=303)
 
 
+@app.get("/stock/{pid}")
+def stock_detail(request: Request, pid: int, user: str = Depends(require_login)):
+    p = db.get_position(pid)
+    if not p or not p.get("ticker"):
+        raise HTTPException(404)
+    market = str(p["market"]).upper()
+    row = next((r for r in prices.enrich(db.all_positions())["rows"] if r["id"] == pid), None)
+    hist = prices.get_history(p["ticker"], market)
+    news = prices.get_news(p["ticker"]) if market in ("US", "JP") else []
+    naver = f"https://finance.naver.com/item/main.naver?code={p['ticker']}" if market == "KR" else None
+    return templates.TemplateResponse(
+        "stock.html",
+        {"request": request, "p": p, "row": row, "market": market,
+         "hist_json": json.dumps(hist, ensure_ascii=False), "news": news, "naver": naver},
+    )
+
+
 @app.get("/log")
 def change_log(request: Request, user: str = Depends(require_login)):
     return templates.TemplateResponse(

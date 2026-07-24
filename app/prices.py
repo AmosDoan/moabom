@@ -161,6 +161,46 @@ def warm(positions):
         pass
 
 
+def get_history(ticker: str, market: str, period: str = "6mo") -> list[dict]:
+    """Daily close history for a stock detail chart. [{day, close}] ascending."""
+    def _p():
+        try:
+            if market == "KR":
+                h = fdr.DataReader(ticker)["Close"].dropna().iloc[-130:]
+            else:
+                h = yf.Ticker(ticker).history(period=period)["Close"].dropna()
+            return [{"day": d.strftime("%Y-%m-%d"), "close": round(float(v), 4)}
+                    for d, v in h.items()]
+        except Exception:
+            return []
+    return _cached_ttl(("hist", ticker, period), _p, 1800)  # 30 min
+
+
+def get_news(ticker: str, limit: int = 8) -> list[dict]:
+    """Recent news via yfinance (US/JP). [{title, summary, publisher, url, time}]."""
+    def _p():
+        out = []
+        try:
+            items = yf.Ticker(ticker).news or []
+        except Exception:
+            return []
+        for it in items[:limit]:
+            c = it.get("content") or {}
+            url = (c.get("canonicalUrl") or c.get("clickThroughUrl") or {}).get("url")
+            title = c.get("title")
+            if not title or not url:
+                continue
+            out.append({
+                "title": title,
+                "summary": (c.get("summary") or "")[:200],
+                "publisher": (c.get("provider") or {}).get("displayName", ""),
+                "url": url,
+                "time": (c.get("pubDate") or "")[:10],
+            })
+        return out
+    return _cached_ttl(("news", ticker), _p, 1800)  # 30 min
+
+
 def get_fx() -> float:
     def _p():
         fx = fdr.DataReader("USD/KRW")
