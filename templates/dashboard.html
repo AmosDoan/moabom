@@ -30,6 +30,10 @@
   /* Compact holdings: 4 columns, secondary metrics stacked — fits phones, no h-scroll */
   table.holdings.compact { width:100%; border-collapse:collapse; table-layout:fixed; }
   table.holdings.compact td { padding:8px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.holdings.compact thead th { padding:4px; border-bottom:1px solid var(--axis);
+    font-size:11px; font-weight:600; color:var(--muted); text-align:right; white-space:nowrap; }
+  table.holdings.compact thead th.hc-name { text-align:left; }
+  .holdings.compact .thsub { font-weight:400; font-size:9.5px; opacity:.7; }
   .hc-name { text-align:left; width:34%; overflow:hidden; }
   .hc-price, .hc-val, .hc-pl { text-align:right; white-space:nowrap; }
   .holdings.compact .nm { font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -154,6 +158,14 @@
 
 {% macro htable(rows) %}
     <table class="holdings compact">
+      <thead>
+        <tr>
+          <th class="hc-name">종목 <span class="thsub">수량·평단</span></th>
+          <th class="hc-price">현재가 <span class="thsub">전일·고점</span></th>
+          <th class="hc-val">평가액 <span class="thsub">비중</span></th>
+          <th class="hc-pl">손익 <span class="thsub">수익률</span></th>
+        </tr>
+      </thead>
       <tbody>
       {% for r in rows %}
         <tr data-live-id="{{ r.id }}">
