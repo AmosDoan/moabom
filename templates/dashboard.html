@@ -116,6 +116,14 @@
 </div>
 
 <div class="card">
+  <div class="acc-head">
+    <span class="n">주식 히트맵</span>
+    <span class="v muted">크기=평가액 · 색=수익률(빨강 이익/파랑 손실)</span>
+  </div>
+  <div id="chart-heatmap"></div>
+</div>
+
+<div class="card">
   <div class="acc-head"><span class="n">순자산 추이</span></div>
   <div id="chart-net"></div>
   <p class="muted" id="net-empty" style="display:none;">추이 그래프는 기록이 이틀 이상 쌓이면 표시됩니다. (오늘 첫 스냅샷 저장됨)</p>
@@ -300,6 +308,39 @@
       fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0.03 } },
       dataLabels: { enabled: false },
       tooltip: merge(base.tooltip, { x: { format: 'yyyy-MM-dd' }, y: { formatter: function (v) { return won(v) + '원'; } } }),
+    })).render();
+  }
+
+  // 3b) 주식 히트맵 (트리맵: 크기=평가액, 색=수익률 diverging 빨강↔파랑)
+  function heatColor(p) {
+    if (p == null) return '#8a9099';
+    var t = Math.max(-1, Math.min(1, p / 25));      // clamp ±25%
+    var g = [138, 144, 153];                          // gray midpoint
+    var to = t >= 0 ? [217, 45, 32] : [29, 104, 217]; // 빨강=이익 / 파랑=손실
+    var a = Math.abs(t);
+    var c = g.map(function (x, i) { return Math.round(x + (to[i] - x) * a); });
+    return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+  }
+  if (D.heatmap && D.heatmap.length) {
+    new ApexCharts(document.getElementById('chart-heatmap'), merge(base, {
+      chart: merge(base.chart, { type: 'treemap', height: 340 }),
+      series: [{ data: D.heatmap.map(function (h) { return { x: h.name, y: h.krw }; }) }],
+      colors: D.heatmap.map(function (h) { return heatColor(h.pct); }),
+      plotOptions: { treemap: { distributed: true, enableShades: false } },
+      legend: { show: false },
+      stroke: { width: 2, colors: [dark ? '#171b21' : '#fff'] },
+      dataLabels: { enabled: true, style: { fontSize: '12px', colors: ['#fff'] },
+        formatter: function (text, op) {
+          var h = D.heatmap[op.dataPointIndex];
+          var s = (h.pct == null) ? '' : (h.pct >= 0 ? '+' : '') + h.pct + '%';
+          return [text, s];
+        } },
+      tooltip: merge(base.tooltip, { custom: function (o) {
+        var h = D.heatmap[o.dataPointIndex];
+        var s = (h.pct == null) ? '-' : (h.pct >= 0 ? '+' : '') + h.pct + '%';
+        return '<div style="padding:6px 10px;"><b>' + h.name + '</b><br>' +
+               won(h.krw) + '원<br>수익률 ' + s + '</div>';
+      } }),
     })).render();
   }
 

@@ -228,11 +228,21 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     series = db.net_worth_series(120)
     stock_hist = sheets.get_stock_history() or []
 
+    # heatmap: each stock tile sized by value, colored by return %
+    heatmap = sorted(
+        [{"name": r["name"], "krw": r["mkt_krw"], "pct": r["pl_pct"]}
+         for r in data["rows"]
+         if str(r.get("market") or "").upper() in ("US", "KR", "JP")
+         and r.get("ticker") and r["mkt_krw"] > 0],
+        key=lambda h: h["krw"], reverse=True,
+    )
+
     chart_data = {
         "alloc": [a for a in alloc if a["krw"] > 0],
         "bars": bar_items,
         "net": series,
         "stock": stock_hist,
+        "heatmap": heatmap,
     }
 
     priced_at_str = (
