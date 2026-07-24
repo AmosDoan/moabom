@@ -525,6 +525,7 @@ def api_live(user: str = Depends(require_login)):
         "total_pl": ("+" if tpl >= 0 else "") + f"{tpl:,}",
         "total_up": tpl >= 0,
         "fx": f'{data["fx"]:,.1f}',
+        "fx_jpy100": f'{data["fx_jpy"] * 100:,.0f}',
         "rows": rows,
     }
 

@@ -103,8 +103,10 @@
       </div>
     </div>
     <div class="kpi">
-      <div class="label">환율 (USD/KRW)</div>
-      <div class="value"><span id="fx">{{ "{:,.1f}".format(d.fx) }}</span></div>
+      <div class="label">환율</div>
+      <div class="value">$ <span id="fx">{{ "{:,.1f}".format(d.fx) }}</span>
+        <span class="muted" style="font-size:14px;">· 100엔 <span id="fxjpy100">{{ "{:,.0f}".format(d.fx_jpy * 100) }}</span>원</span>
+      </div>
       <div class="asof" id="asof">{% if priced_at %}시세 기준 {{ priced_at }} · 30초 자동 갱신{% endif %}</div>
     </div>
   </div>
@@ -383,6 +385,7 @@
       setText(document.getElementById('total-krw'), d.total_krw);
       const tp = document.getElementById('total-pl'); setText(tp, d.total_pl + '원'); setSign(tp, d.total_up);
       setText(document.getElementById('fx'), d.fx);
+      setText(document.getElementById('fxjpy100'), d.fx_jpy100);
       if (d.priced_at) setText(document.getElementById('asof'), '시세 기준 ' + d.priced_at + ' · 30초 자동 갱신');
       for (const id in d.rows) {
         const v = d.rows[id];

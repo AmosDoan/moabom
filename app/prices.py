@@ -423,5 +423,6 @@ def enrich(positions: list[dict]) -> dict:
         "total_krw": round(total),
         "total_pl_krw": round(total_pl),
         "fx": fx,
+        "fx_jpy": get_fx_jpy(),
         "priced_at": priced_at(),
     }
