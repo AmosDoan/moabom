@@ -225,7 +225,11 @@
       <thead><tr><th>항목</th><th>평가액(원)</th></tr></thead>
       <tbody>
       {% for i in nonstock.assets %}
+        {% if i.name == '은행 예적금' and banks %}
+        <tr class="bank-row"><td>{{ i.name }} <span class="exp">▾</span></td><td>{{ won(i.krw) }}</td></tr>
+        {% else %}
         <tr><td>{{ i.name }}</td><td>{{ won(i.krw) }}</td></tr>
+        {% endif %}
       {% endfor %}
       </tbody>
     </table>
@@ -430,11 +434,13 @@
       row.classList.toggle('open', open);
     });
   });
-  document.querySelectorAll('.nonstock-head').forEach(function (head) {
-    head.addEventListener('click', function () {
-      var d = head.closest('.card').querySelector('.nonstock-detail');
+  document.querySelectorAll('.nonstock-head, .bank-row').forEach(function (el) {
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', function () {
+      var d = el.closest('.card').querySelector('.nonstock-detail');
       if (!d) return;
-      head.classList.toggle('open', d.classList.toggle('open'));
+      var open = d.classList.toggle('open');
+      var arrow = el.querySelector('.exp'); if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
     });
   });
 })();
