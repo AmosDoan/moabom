@@ -39,10 +39,10 @@
     {% endif %}
   </div>
   <div class="st-meta">
-    <span><span class="k">평가액</span>{{ '{:,.0f}'.format(row.mkt_krw) }}원</span>
-    {% if row.pl_krw is not none %}<span><span class="k">손익</span><span class="{{ 'up' if row.pl_krw >= 0 else 'down' }}">{{ '+' if row.pl_krw >= 0 else '' }}{{ '{:,.0f}'.format(row.pl_krw) }}원 ({{ row.pl_pct }}%)</span></span>{% endif %}
-    {% if row.avg_cost is not none %}<span><span class="k">평단</span>{{ money(row.avg_cost, p.currency) }}</span>{% endif %}
-    {% if row.shares is not none %}<span><span class="k">수량</span>{{ '%g'|format(row.shares) }}주</span>{% endif %}
+    <span><span class="k">평가액</span><span class="priv">{{ '{:,.0f}'.format(row.mkt_krw) }}원</span></span>
+    {% if row.pl_krw is not none %}<span><span class="k">손익</span><span class="priv {{ 'up' if row.pl_krw >= 0 else 'down' }}">{{ '+' if row.pl_krw >= 0 else '' }}{{ '{:,.0f}'.format(row.pl_krw) }}원</span> <span class="{{ 'up' if row.pl_krw >= 0 else 'down' }}">({{ row.pl_pct }}%)</span></span>{% endif %}
+    {% if row.avg_cost is not none %}<span><span class="k">평단</span><span class="priv">{{ money(row.avg_cost, p.currency) }}</span></span>{% endif %}
+    {% if row.shares is not none %}<span><span class="k">수량</span><span class="priv">{{ '%g'|format(row.shares) }}주</span></span>{% endif %}
     {% if row.high %}<span><span class="k">52주고</span>{{ money(row.high, p.currency) }}{% if row.from_high_pct is not none %} ({{ '%.0f'|format(row.from_high_pct) }}%){% endif %}</span>{% endif %}
   </div>
   {% endif %}
