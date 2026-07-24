@@ -166,7 +166,7 @@
         {% if r.shares is not none %}{{ kv('수량', '%g'|format(r.shares) ~ '주') }}{% endif %}
         {% if r.avg_cost is not none %}{{ kv('평단', money(r.avg_cost, r.currency)) }}{% endif %}
         {% if r.price is not none %}{{ kv('현재가', money(r.price, r.currency), 'c-price') }}{% endif %}
-        {% if r.high %}{{ kv('52주고', money(r.high, r.currency) ~ (' <span class="muted">' ~ ('%.0f'|format(r.from_high_pct)) ~ '%</span>' if r.from_high_pct is not none else '')) }}{% endif %}
+        {% if r.high %}<div class="kv"><span class="k">52주고</span><span class="v">{{ money(r.high, r.currency) }}{% if r.from_high_pct is not none %} <span class="muted">{{ '%.0f'|format(r.from_high_pct) }}%</span>{% endif %}</span></div>{% endif %}
         <div class="kv"><span class="k">평가액</span><span class="v"><span class="c-mkt">{{ '{:,.0f}'.format(r.mkt_krw) }}</span>원</span></div>
         {{ kv('비중', r.weight ~ '%') }}
         {% if r.pl_krw is not none %}<div class="kv"><span class="k">손익</span><span class="v"><span class="c-pl {{ 'up' if r.pl_krw >= 0 else 'down' }}">{{ ('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw) }}</span>원</span></div>{% endif %}
