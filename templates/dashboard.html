@@ -2,7 +2,7 @@
 {% block body %}
 {% set won = "{:,.0f}".format %}
 {%- macro mkt_badges(ms) -%}
-  {% for m in ms %}<span class="mkt mkt-{{ m.state }}"><span class="dot"></span>{{ m.flag }} {{ m.name }} <span class="lbl">{{ m.label }}</span></span>{% endfor %}
+  {% for m in ms %}<a class="mkt mkt-{{ m.state }}" href="/market/{{ m.region }}"><span class="dot"></span>{{ m.flag }} {{ m.name }} <span class="lbl">{{ m.label }}</span></a>{% endfor %}
 {%- endmacro -%}
 {%- macro money(val, cur) -%}
   {%- if val is none -%}-
@@ -16,7 +16,8 @@
   .tk { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.3px; }
   .markets { display:flex; gap:8px; flex-wrap:wrap; }
   .mkt { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
-         border:1px solid var(--line); font-size:13px; }
+         border:1px solid var(--line); font-size:13px; color:var(--ink); text-decoration:none; cursor:pointer; }
+  .mkt:hover { border-color:var(--muted); }
   .mkt .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
   .mkt .lbl { color:var(--muted); }
   .mkt-open .dot { background:#0ca30c; box-shadow:0 0 0 3px rgba(12,163,12,.15); }
@@ -394,8 +395,8 @@
       if (d.markets) {
         var ms = document.getElementById('market-status');
         if (ms) ms.innerHTML = d.markets.map(function (m) {
-          return '<span class="mkt mkt-' + m.state + '"><span class="dot"></span>' +
-                 m.flag + ' ' + m.name + ' <span class="lbl">' + m.label + '</span></span>';
+          return '<a class="mkt mkt-' + m.state + '" href="/market/' + m.region + '"><span class="dot"></span>' +
+                 m.flag + ' ' + m.name + ' <span class="lbl">' + m.label + '</span></a>';
         }).join('');
       }
       setText(document.getElementById('total-krw'), d.total_krw);

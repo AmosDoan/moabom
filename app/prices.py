@@ -85,13 +85,68 @@ def _mkt_state(label: str) -> str:
 
 def market_status() -> list[dict]:
     raw = [
-        {"name": "국내", "flag": "🇰🇷", "label": kr_session()},
-        {"name": "미국", "flag": "🇺🇸", "label": us_session()},
-        {"name": "일본", "flag": "🇯🇵", "label": jp_session()},
+        {"name": "국내", "region": "kr", "flag": "🇰🇷", "label": kr_session()},
+        {"name": "미국", "region": "us", "flag": "🇺🇸", "label": us_session()},
+        {"name": "일본", "region": "jp", "flag": "🇯🇵", "label": jp_session()},
     ]
     for m in raw:
         m["state"] = _mkt_state(m["label"])
     return raw
+
+
+_INDICES = {
+    "kr": [("코스피", "^KS11"), ("코스닥", "^KQ11")],
+    "us": [("S&P 500", "^GSPC"), ("나스닥", "^IXIC"), ("다우존스", "^DJI"), ("VIX", "^VIX")],
+    "jp": [("닛케이 225", "^N225")],
+}
+
+_MARKET_INFO = {
+    "kr": {"name": "국내 (KRX)", "flag": "🇰🇷", "tzkey": "kst",
+           "hours": [("장 시작 동시호가", "08:30 ~ 09:00"), ("정규장", "09:00 ~ 15:30"),
+                     ("장 마감 동시호가", "15:20 ~ 15:30"), ("시간외 단일가", "16:00 ~ 18:00")]},
+    "us": {"name": "미국 (NYSE/NASDAQ)", "flag": "🇺🇸", "tzkey": "et",
+           "hours": [("프리마켓", "04:00 ~ 09:30"), ("정규장", "09:30 ~ 16:00"),
+                     ("애프터마켓", "16:00 ~ 20:00")]},
+    "jp": {"name": "일본 (TSE)", "flag": "🇯🇵", "tzkey": "jst",
+           "hours": [("전장", "09:00 ~ 11:30"), ("점심 휴장", "11:30 ~ 12:30"),
+                     ("후장", "12:30 ~ 15:30")]},
+}
+
+
+def market_detail(region: str) -> dict | None:
+    info = _MARKET_INFO.get(region)
+    if not info:
+        return None
+    tz = {"kst": _KST, "et": _ET, "jst": _JST}.get(info["tzkey"])
+    session = {"kr": kr_session, "us": us_session, "jp": jp_session}[region]()
+    now_local = datetime.now(tz).strftime("%Y-%m-%d %H:%M") if tz else "-"
+    now_kst = datetime.now(_KST).strftime("%H:%M") if _KST else "-"
+    return {
+        "region": region, "name": info["name"], "flag": info["flag"],
+        "session": session, "state": _mkt_state(session),
+        "hours": info["hours"], "now_local": now_local, "now_kst": now_kst,
+        "tz_label": {"kst": "한국시간", "et": "미 동부시간", "jst": "일본시간"}[info["tzkey"]],
+    }
+
+
+def get_indices(region: str) -> list[dict]:
+    specs = _INDICES.get(region, [])
+    if not specs:
+        return []
+
+    def _p():
+        out = []
+        for name, tk in specs:
+            try:
+                h = yf.Ticker(tk).history(period="5d")["Close"].dropna()
+                val = float(h.iloc[-1])
+                prev = float(h.iloc[-2]) if len(h) >= 2 else val
+                chg = (val - prev) / prev * 100 if prev else 0.0
+                out.append({"name": name, "value": round(val, 2), "chg": round(chg, 2)})
+            except Exception:
+                out.append({"name": name, "value": None, "chg": None})
+        return out
+    return _cached_ttl(("idx", region), _p, 120)  # 2 min
 
 _CACHE: dict = {}
 _TTL = 30  # seconds (client polls ~30s; keep cache short so polls get fresh data)

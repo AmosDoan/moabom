@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name }} · 시장{% endblock %}
+{% block body %}
+<style>
+  .sess { display:inline-block; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:600;
+          border:1px solid var(--line); }
+  .sess.open { color:#0ca30c; border-color:#0ca30c; }
+  .sess.ext  { color:#b8860b; border-color:#eab308; }
+  .idx-row { display:flex; justify-content:space-between; align-items:baseline; padding:11px 2px;
+             border-bottom:1px solid var(--line); }
+  .idx-row:last-child { border-bottom:none; }
+  .idx-name { font-weight:600; }
+  .idx-val { font-variant-numeric:tabular-nums; }
+  .idx-chg { font-size:13px; margin-left:8px; }
+</style>
+
+<p style="margin:0 0 10px;"><a class="muted" href="/">← 현황으로</a></p>
+
+<div class="card">
+  <div class="st-head" style="display:flex; align-items:center; gap:10px;">
+    <h2 style="margin:0; font-size:20px;">{{ m.flag }} {{ m.name }}</h2>
+    <span class="sess {{ m.state }}">{{ m.session }}</span>
+  </div>
+  <div class="muted" style="margin-top:8px;">
+    현지시간 <b>{{ m.now_local }}</b> ({{ m.tz_label }}) · 한국시간 {{ m.now_kst }}
+  </div>
+</div>
+
+<div class="card">
+  <div class="acc-head"><span class="n">장 시간</span></div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>구분</th><th>시간 ({{ m.tz_label }})</th></tr></thead>
+      <tbody>
+      {% for label, time in m.hours %}
+        <tr><td>{{ label }}</td><td>{{ time }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:8px;">공휴일·서머타임은 반영되지 않은 기준 시간입니다.</p>
+</div>
+
+<div class="card">
+  <div class="acc-head"><span class="n">주요 지수</span><span class="v muted">2분 갱신</span></div>
+  {% if indices %}
+    {% for i in indices %}
+    <div class="idx-row">
+      <span class="idx-name">{{ i.name }}</span>
+      <span>
+        <span class="idx-val">{% if i.value is not none %}{{ '{:,.2f}'.format(i.value) }}{% else %}-{% endif %}</span>
+        {% if i.chg is not none %}<span class="idx-chg {{ 'up' if i.chg >= 0 else 'down' }}">{{ '▲' if i.chg >= 0 else '▼' }}{{ '%.2f'|format(i.chg if i.chg >= 0 else -i.chg) }}%</span>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted">지수 데이터를 불러오지 못했습니다.</p>
+  {% endif %}
+</div>
+{% endblock %}

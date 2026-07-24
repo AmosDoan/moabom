@@ -449,6 +449,17 @@ def trade(
     return RedirectResponse("/positions", status_code=303)
 
 
+@app.get("/market/{region}")
+def market_page(request: Request, region: str, user: str = Depends(require_login)):
+    detail = prices.market_detail(region)
+    if not detail:
+        raise HTTPException(404)
+    return templates.TemplateResponse(
+        "market.html",
+        {"request": request, "m": detail, "indices": prices.get_indices(region)},
+    )
+
+
 @app.get("/stock/{pid}")
 def stock_detail(request: Request, pid: int, user: str = Depends(require_login)):
     p = db.get_position(pid)
