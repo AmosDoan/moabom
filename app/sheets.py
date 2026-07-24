@@ -13,6 +13,7 @@ Only NON-stock, NON-duplicated items are pulled:
 from __future__ import annotations
 
 import os
+import threading
 import time
 
 KEY_PATH = os.environ.get("GOOGLE_SA_KEY", os.path.join(os.path.dirname(__file__), "..", "data", "gsa.json"))
@@ -40,18 +41,55 @@ def _read_raw() -> list[list[str]]:
     return ws.get_all_values()
 
 
-def _raw_cached() -> list[list[str]] | None:
-    """Cached sheet read shared by get_nonstock/get_banks (avoids double API calls)."""
+_REFRESHING: set = set()
+_REFRESH_LOCK = threading.Lock()
+
+
+def _bg_refresh(key, producer):
+    with _REFRESH_LOCK:
+        if key in _REFRESHING:
+            return
+        _REFRESHING.add(key)
+
+    def run():
+        try:
+            val = producer()
+            if val is not None:
+                _CACHE[key] = (time.time(), val)
+        except Exception:
+            pass
+        finally:
+            with _REFRESH_LOCK:
+                _REFRESHING.discard(key)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _swr(key, producer, ttl=_TTL):
+    """Serve cached sheet data immediately; refresh in background when stale.
+    Only a truly cold key blocks (the Google Sheets read is the slow part)."""
     now = time.time()
-    hit = _CACHE.get("raw")
-    if hit and now - hit[0] < _TTL:
+    hit = _CACHE.get(key)
+    if hit is not None:
+        if now - hit[0] >= ttl:
+            _bg_refresh(key, producer)
         return hit[1]
+    val = producer()
+    if val is not None:
+        _CACHE[key] = (now, val)
+    return val
+
+
+def _read_raw_safe():
     try:
-        rows = _read_raw()
+        return _read_raw()
     except Exception:
         return None
-    _CACHE["raw"] = (now, rows)
-    return rows
+
+
+def _raw_cached() -> list[list[str]] | None:
+    """Cached sheet read shared by get_nonstock/get_banks (avoids double API calls)."""
+    return _swr("raw", _read_raw_safe)
 
 
 def _num_cell(s: str):
@@ -96,14 +134,11 @@ def get_stock_history() -> list[dict] | None:
     [{day:'YYYY-MM-DD', krw}] sorted ascending, or None."""
     if not available():
         return None
+    return _swr("stockhist", _stock_history_producer)
+
+
+def _stock_history_producer():
     import re
-    import time as _t
-
-    now = _t.time()
-    hit = _CACHE.get("stockhist")
-    if hit and now - hit[0] < _TTL:
-        return hit[1]
-
     try:
         import gspread
         gc = gspread.service_account(filename=KEY_PATH)
@@ -124,9 +159,7 @@ def get_stock_history() -> list[dict] | None:
         iso = f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
         pts[iso] = round(val * 10000)  # last occurrence wins
     series = [{"day": k, "krw": pts[k]} for k in sorted(pts)]
-    result = series or None
-    _CACHE["stockhist"] = (now, result)
-    return result
+    return series or None
 
 
 def get_nonstock() -> dict | None:

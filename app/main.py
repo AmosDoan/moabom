@@ -165,9 +165,20 @@ def seed_if_empty():
 
 seed_if_empty()
 
-# Warm the price cache at startup (off the request path) so the first load is instant.
+# Warm the price + sheet caches at startup (off the request path) so first load is instant.
 import threading as _threading
-_threading.Thread(target=lambda: prices.warm(db.all_positions()), daemon=True).start()
+
+
+def _warm_all():
+    prices.warm(db.all_positions())
+    for fn in (sheets.get_nonstock, sheets.get_banks, sheets.get_stock_history):
+        try:
+            fn()
+        except Exception:
+            pass
+
+
+_threading.Thread(target=_warm_all, daemon=True).start()
 
 
 @app.get("/")
@@ -228,14 +239,25 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     series = db.net_worth_series(120)
     stock_hist = sheets.get_stock_history() or []
 
-    # heatmap: each stock tile sized by value, colored by return %
-    heatmap = sorted(
+    # heatmap: each stock tile sized by value, colored by return %.
+    # Fold holdings under 1% of the total into a single 기타 tile so small tiles stay readable.
+    _hm = sorted(
         [{"name": r["name"], "krw": r["mkt_krw"], "pct": r["pl_pct"]}
          for r in data["rows"]
          if str(r.get("market") or "").upper() in ("US", "KR", "JP")
          and r.get("ticker") and r["mkt_krw"] > 0],
         key=lambda h: h["krw"], reverse=True,
     )
+    _hm_total = sum(h["krw"] for h in _hm) or 1
+    _thresh = _hm_total * 0.01
+    heatmap = [h for h in _hm if h["krw"] >= _thresh]
+    _small = [h for h in _hm if h["krw"] < _thresh]
+    if _small:
+        heatmap.append({
+            "name": f"기타 {len(_small)}종목",
+            "krw": sum(h["krw"] for h in _small),
+            "pct": None,
+        })
 
     chart_data = {
         "alloc": [a for a in alloc if a["krw"] > 0],

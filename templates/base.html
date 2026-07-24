@@ -56,9 +56,29 @@
     .kpis { grid-template-columns:1fr 1fr; }
     .kpi .value { font-size:20px; }
   }
+  #app-loading { position:fixed; inset:0; z-index:9999; display:flex; align-items:center;
+    justify-content:center; flex-direction:column; gap:14px; background:var(--bg);
+    transition:opacity .3s ease; }
+  #app-loading .spin { width:38px; height:38px; border-radius:50%;
+    border:3px solid var(--line); border-top-color:var(--accent); animation:spin .8s linear infinite; }
+  #app-loading .lt { color:var(--muted); font-size:13px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
+<div id="app-loading"><div class="spin"></div><div class="lt">불러오는 중…</div></div>
+<script>
+  (function () {
+    function hide() {
+      var el = document.getElementById('app-loading');
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(function () { el.style.display = 'none'; }, 300);
+    }
+    window.addEventListener('load', function () { setTimeout(hide, 150); });
+    setTimeout(hide, 8000); // fallback so it never sticks
+  })();
+</script>
 <header>
   <h1><a href="/" style="color:inherit; text-decoration:none;">💰 자산 대시보드</a></h1>
   <nav>
