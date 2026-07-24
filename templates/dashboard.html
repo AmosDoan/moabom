@@ -48,6 +48,11 @@
   .subhead { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
              margin:14px 2px 4px; padding-top:8px; font-weight:700; font-size:13px; border-top:1px dashed var(--line); }
   .subhead .v { font-size:12px; font-weight:600; color:var(--muted); }
+  .nonstock-head { cursor:pointer; }
+  .nonstock-head .exp { color:var(--muted); font-size:10px; margin-left:6px; display:inline-block; transition:transform .15s; }
+  .nonstock-head.open .exp { transform:rotate(180deg); }
+  .nonstock-detail { display:none; }
+  .nonstock-detail.open { display:block; }
 </style>
 
 <div class="card">
@@ -157,7 +162,7 @@
   <div class="tablewrap">
     <table class="holdings">
       <thead><tr>
-        <th>종목</th><th>현재가</th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th>
+        <th>종목</th><th>현재가 <span class="thsub">(전일대비)</span></th><th>평가액(원)</th><th>손익(원)</th><th>수익률</th>
       </tr></thead>
       <tbody>
       {% for r in rows %}
@@ -206,10 +211,10 @@
 
 {% if nonstock %}
 <div class="card">
-  <div class="acc-head">
+  <div class="acc-head nonstock-head">
     <span class="n">비주식 자산
       <a class="muted" href="https://docs.google.com/spreadsheets/d/1nmtCUNBi62qzROUYhhDu8lhixucxPyK3jdhN8YISnhg/edit"
-         target="_blank" rel="noopener">구글 시트 열기 ↗</a>
+         target="_blank" rel="noopener" onclick="event.stopPropagation()">구글 시트 열기 ↗</a>{% if banks %}<span class="exp">▾</span>{% endif %}
     </span>
     <span class="v">{{ won(nonstock.total_krw) }}원</span>
   </div>
@@ -223,31 +228,28 @@
       </tbody>
     </table>
   </div>
-  <p class="muted" style="margin-top:8px;">금·달러는 위 계좌(금현물·USD현금)와 중복이라 제외했습니다. 시트 값은 15분 캐시.</p>
-</div>
-{% endif %}
+  <p class="muted" style="margin-top:8px;">금·달러는 위 계좌(금현물·USD현금)와 중복이라 제외했습니다. 시트 값은 15분 캐시.{% if banks %} 카드를 누르면 은행 예적금 상세가 펼쳐집니다.{% endif %}</p>
 
-{% if banks %}
-<div class="card">
-  <div class="acc-head">
-    <span class="n">은행 예적금 상세</span>
-    <span class="v">{{ won(banks | sum(attribute='krw')) }}원</span>
+  {% if banks %}
+  <div class="nonstock-detail">
+    <div class="subhead"><span>은행 예적금 상세</span><span class="v">{{ won(banks | sum(attribute='krw')) }}원</span></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>은행</th><th>금액(원)</th><th>만기일</th><th>금리</th></tr></thead>
+        <tbody>
+        {% for b in banks %}
+          <tr>
+            <td>{{ b.name }}</td>
+            <td>{{ won(b.krw) }}</td>
+            <td class="muted">{{ b.maturity or '-' }}</td>
+            <td class="muted">{{ b.rate or '-' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>은행</th><th>금액(원)</th><th>만기일</th><th>금리</th></tr></thead>
-      <tbody>
-      {% for b in banks %}
-        <tr>
-          <td>{{ b.name }}</td>
-          <td>{{ won(b.krw) }}</td>
-          <td class="muted">{{ b.maturity or '-' }}</td>
-          <td class="muted">{{ b.rate or '-' }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -424,6 +426,13 @@
       if (!d || !d.classList.contains('hdetail')) return;
       var open = d.classList.toggle('open');
       row.classList.toggle('open', open);
+    });
+  });
+  document.querySelectorAll('.nonstock-head').forEach(function (head) {
+    head.addEventListener('click', function () {
+      var d = head.closest('.card').querySelector('.nonstock-detail');
+      if (!d) return;
+      head.classList.toggle('open', d.classList.toggle('open'));
     });
   });
 })();
