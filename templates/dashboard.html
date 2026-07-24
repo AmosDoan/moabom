@@ -27,10 +27,12 @@
   .ext .tag { display:inline-block; padding:0 4px; border-radius:4px; font-size:10px;
               background:var(--line); color:var(--muted); margin-right:3px; }
 
+  table.holdings tfoot .total-row td { font-weight:700; border-top:2px solid var(--axis); padding-top:9px; }
+
   /* Mobile: stack each holding row into a labeled card (no horizontal scroll) */
   @media (max-width: 640px) {
     table.holdings thead { display:none; }
-    table.holdings, table.holdings tbody, table.holdings tr, table.holdings td { display:block; width:100%; }
+    table.holdings, table.holdings tbody, table.holdings tfoot, table.holdings tr, table.holdings td { display:block; width:100%; }
     table.holdings tr { border:1px solid var(--line); border-radius:10px; margin-bottom:10px; }
     table.holdings td { display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px;
                         text-align:right; border:none; padding:6px 12px; white-space:normal; }
@@ -39,6 +41,8 @@
                                     border-bottom:1px solid var(--line); }
     table.holdings td:first-child::before { content:''; }
     table.holdings td .ext { flex-basis:100%; text-align:right; }
+    table.holdings tfoot .total-row td.blank-m { display:none; }
+    table.holdings tfoot .total-row { border:1px solid var(--axis); }
   }
 </style>
 
@@ -169,6 +173,15 @@
         </tr>
       {% endfor %}
       </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="6">합계</td>
+          <td data-label="평가액 합계">{{ won(a.mkt_krw) }}</td>
+          <td class="{{ 'up' if a.pl_krw >= 0 else 'down' }}" data-label="손익 합계">{{ '+' if a.pl_krw >= 0 else '' }}{{ won(a.pl_krw) }}</td>
+          <td class="blank-m"></td>
+          <td data-label="비중">{{ a.weight }}%</td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 </div>
