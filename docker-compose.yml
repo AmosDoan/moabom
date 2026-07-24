@@ -6,7 +6,11 @@ services:
     ports:
       - "8842:8000"          # host 8842 -> reverse proxy target
     volumes:
-      - ./data:/srv/data      # SQLite persists here (pre-create on NAS!)
+      - ./data:/srv/data          # SQLite persists here (pre-create on NAS!)
+      - ./app:/srv/app            # source bind-mounted for fast dev (scp + auto-reload)
+      - ./templates:/srv/templates
+      - ./static:/srv/static
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - ASSET_USER=${ASSET_USER:?set ASSET_USER}
       - ASSET_PASSWORD=${ASSET_PASSWORD:?set ASSET_PASSWORD}
