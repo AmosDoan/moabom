@@ -342,7 +342,11 @@
   }
   if (D.heatmap && D.heatmap.length) {
     new ApexCharts(document.getElementById('chart-heatmap'), merge(base, {
-      chart: merge(base.chart, { type: 'treemap', height: 340 }),
+      chart: merge(base.chart, { type: 'treemap', height: 340,
+        events: { dataPointSelection: function (e, ctx, cfg) {
+          var h = D.heatmap[cfg.dataPointIndex];
+          if (h && h.id) window.location.href = '/stock/' + h.id;
+        } } }),
       series: [{ data: D.heatmap.map(function (h) { return { x: h.name, y: h.krw }; }) }],
       colors: D.heatmap.map(function (h) { return heatColor(h.pct); }),
       plotOptions: { treemap: { distributed: true, enableShades: false } },

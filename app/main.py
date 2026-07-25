@@ -264,7 +264,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     # heatmap: each stock tile sized by value, colored by return %.
     # Fold holdings under 1% of the total into a single 기타 tile so small tiles stay readable.
     _hm = sorted(
-        [{"name": r["name"], "krw": r["mkt_krw"], "pct": r["pl_pct"]}
+        [{"id": r["id"], "name": r["name"], "krw": r["mkt_krw"], "pct": r["pl_pct"]}
          for r in data["rows"]
          if str(r.get("market") or "").upper() in ("US", "KR", "JP")
          and r.get("ticker") and r["mkt_krw"] > 0],
@@ -276,6 +276,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     _small = [h for h in _hm if h["krw"] < _thresh]
     if _small:
         heatmap.append({
+            "id": None,
             "name": f"기타 {len(_small)}종목",
             "krw": sum(h["krw"] for h in _small),
             "pct": None,
