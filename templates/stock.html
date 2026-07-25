@@ -20,6 +20,16 @@
   .news-item a:hover { text-decoration:underline; }
   .news-meta { color:var(--muted); font-size:12px; margin-top:3px; }
   .news-sum { color:var(--muted); font-size:13px; margin-top:5px; }
+  .fund-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:14px 16px; }
+  .fund-kv { display:flex; flex-direction:column; gap:3px; }
+  .fund-kv .fv { font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .metric { color:var(--muted); font-size:12px; width:fit-content; cursor:help;
+            border-bottom:1px dotted var(--muted); position:relative; }
+  .metric:hover::after {
+    content:attr(data-tip); position:absolute; left:0; top:150%; z-index:20;
+    width:max-content; max-width:240px; white-space:normal; text-align:left;
+    background:var(--ink); color:var(--bg); padding:8px 11px; border-radius:8px;
+    font-size:12px; font-weight:400; line-height:1.5; box-shadow:0 6px 18px rgba(0,0,0,.25); }
 </style>
 
 <p style="margin:0 0 10px;"><a class="muted" href="/">← 현황으로</a></p>
@@ -54,16 +64,22 @@
   <p class="muted" id="st-chart-empty" style="display:none;">가격 데이터를 불러오지 못했습니다.</p>
 </div>
 
+{% macro metric(label, value, tip) %}
+  <div class="fund-kv">
+    <span class="k metric" data-tip="{{ tip }}">{{ label }}</span>
+    <span class="fv">{{ value }}</span>
+  </div>
+{% endmacro %}
 {% if fund and (fund.per or fund.forward_per or fund.eps or fund.pbr or fund.div_yield or fund.market_cap) %}
 <div class="card">
-  <div class="acc-head"><span class="n">기업 지표</span></div>
-  <div class="detail-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:12px 16px;">
-    {% if fund.per is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">PER</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.per) }}</span></div>{% endif %}
-    {% if fund.forward_per is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">선행 PER</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.forward_per) }}</span></div>{% endif %}
-    {% if fund.pbr is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">PBR</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.pbr) }}</span></div>{% endif %}
-    {% if fund.eps is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">EPS</span><span class="v" style="font-size:16px; font-weight:600;">{{ money(fund.eps, p.currency) }}</span></div>{% endif %}
-    {% if fund.div_yield is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">배당수익률</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.div_yield) }}%</span></div>{% endif %}
-    {% if fund.market_cap %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">시가총액</span><span class="v" style="font-size:16px; font-weight:600;">{{ fund.market_cap }}</span></div>{% endif %}
+  <div class="acc-head"><span class="n">기업 지표 <span class="muted" style="font-size:12px; font-weight:400;">(지표 이름에 마우스를 올리면 설명)</span></span></div>
+  <div class="fund-grid">
+    {% if fund.per is not none %}{{ metric('PER', '%.2f'|format(fund.per), 'PER = 주가 ÷ 주당순이익. 이익 대비 주가가 몇 배인지. 낮을수록 이익 대비 싸다는 뜻이지만 업종·성장성마다 기준이 다릅니다.') }}{% endif %}
+    {% if fund.forward_per is not none %}{{ metric('선행 PER', '%.2f'|format(fund.forward_per), '선행 PER = 내년 예상 이익 기준 PER. 앞으로의 이익 대비 현재 주가 수준을 봅니다.') }}{% endif %}
+    {% if fund.pbr is not none %}{{ metric('PBR', '%.2f'|format(fund.pbr), 'PBR = 주가 ÷ 주당순자산. 회사가 가진 순자산(장부가치) 대비 주가. 1보다 낮으면 장부가치보다 싸게 거래된다는 뜻.') }}{% endif %}
+    {% if fund.eps is not none %}{{ metric('EPS', money(fund.eps, p.currency), 'EPS = 주당순이익. 주식 1주가 1년에 벌어들이는 순이익. 클수록 수익성이 좋습니다.') }}{% endif %}
+    {% if fund.div_yield is not none %}{{ metric('배당수익률', '%.2f'|format(fund.div_yield) ~ '%', '배당수익률 = 1년 배당금 ÷ 주가. 주가 대비 배당을 얼마나 주는지. 은행 이자율과 비슷한 개념.') }}{% endif %}
+    {% if fund.market_cap %}{{ metric('시가총액', fund.market_cap, '시가총액 = 주가 × 전체 주식 수. 회사 전체의 시장 가치(회사 크기)입니다.') }}{% endif %}
   </div>
 </div>
 {% endif %}
