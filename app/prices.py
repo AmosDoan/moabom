@@ -231,6 +231,46 @@ def get_history(ticker: str, market: str, period: str = "6mo") -> list[dict]:
     return _cached_ttl(("hist", ticker, period), _p, 1800)  # 30 min
 
 
+def _fmt_cap(v: float, cur: str) -> str:
+    if cur == "USD":
+        if v >= 1e12:
+            return f"${v/1e12:.2f}T"
+        if v >= 1e9:
+            return f"${v/1e9:.1f}B"
+        return f"${v/1e6:.0f}M"
+    if cur == "JPY":
+        return f"¥{v/1e12:.2f}조"
+    if v >= 1e12:
+        return f"{v/1e12:.1f}조"
+    return f"{v/1e8:.0f}억"
+
+
+def get_fundamentals(ticker: str, market: str, currency: str) -> dict:
+    """PER 등 기업 지표 via yfinance info. KR은 .KS 접미사, 일부 값만 제공."""
+    yft = ticker + ".KS" if market == "KR" else ticker
+
+    def _p():
+        try:
+            info = yf.Ticker(yft).get_info() or {}
+        except Exception:
+            return {}
+
+        def num(k):
+            v = info.get(k)
+            return v if isinstance(v, (int, float)) else None
+
+        cap = num("marketCap")
+        return {
+            "per": num("trailingPE"),
+            "forward_per": num("forwardPE"),
+            "eps": num("trailingEps"),
+            "pbr": num("priceToBook"),
+            "div_yield": num("dividendYield"),
+            "market_cap": _fmt_cap(cap, currency) if cap else None,
+        }
+    return _cached_ttl(("fund", yft), _p, 3600)  # 1 hour
+
+
 def get_news(ticker: str, limit: int = 8) -> list[dict]:
     """Recent news via yfinance (US/JP). [{title, summary, publisher, url, time}]."""
     def _p():

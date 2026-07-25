@@ -54,6 +54,20 @@
   <p class="muted" id="st-chart-empty" style="display:none;">가격 데이터를 불러오지 못했습니다.</p>
 </div>
 
+{% if fund and (fund.per or fund.forward_per or fund.eps or fund.pbr or fund.div_yield or fund.market_cap) %}
+<div class="card">
+  <div class="acc-head"><span class="n">기업 지표</span></div>
+  <div class="detail-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:12px 16px;">
+    {% if fund.per is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">PER</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.per) }}</span></div>{% endif %}
+    {% if fund.forward_per is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">선행 PER</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.forward_per) }}</span></div>{% endif %}
+    {% if fund.pbr is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">PBR</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.pbr) }}</span></div>{% endif %}
+    {% if fund.eps is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">EPS</span><span class="v" style="font-size:16px; font-weight:600;">{{ money(fund.eps, p.currency) }}</span></div>{% endif %}
+    {% if fund.div_yield is not none %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">배당수익률</span><span class="v" style="font-size:16px; font-weight:600;">{{ '%.2f'|format(fund.div_yield) }}%</span></div>{% endif %}
+    {% if fund.market_cap %}<div class="kv" style="display:flex; flex-direction:column; gap:2px;"><span class="k" style="color:var(--muted); font-size:12px;">시가총액</span><span class="v" style="font-size:16px; font-weight:600;">{{ fund.market_cap }}</span></div>{% endif %}
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="acc-head"><span class="n">관련 뉴스</span></div>
   {% if news %}

@@ -470,9 +470,10 @@ def stock_detail(request: Request, pid: int, user: str = Depends(require_login))
     hist = prices.get_history(p["ticker"], market)
     news = prices.get_news(p["ticker"]) if market in ("US", "JP") else []
     naver = f"https://finance.naver.com/item/main.naver?code={p['ticker']}" if market == "KR" else None
+    fund = prices.get_fundamentals(p["ticker"], market, str(p["currency"]).upper())
     return templates.TemplateResponse(
         "stock.html",
-        {"request": request, "p": p, "row": row, "market": market,
+        {"request": request, "p": p, "row": row, "market": market, "fund": fund,
          "hist_json": json.dumps(hist, ensure_ascii=False), "news": news, "naver": naver},
     )
 
