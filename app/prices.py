@@ -250,14 +250,24 @@ def get_fundamentals(ticker: str, market: str, currency: str) -> dict:
     yft = ticker + ".KS" if market == "KR" else ticker
 
     def _p():
+        tk = yf.Ticker(yft)
         try:
-            info = yf.Ticker(yft).get_info() or {}
+            info = tk.get_info() or {}
         except Exception:
-            return {}
+            info = {}
+        try:
+            cal = tk.calendar or {}
+        except Exception:
+            cal = {}
 
         def num(k):
             v = info.get(k)
             return v if isinstance(v, (int, float)) else None
+
+        def date_of(v):
+            if isinstance(v, (list, tuple)):
+                v = v[0] if v else None
+            return v.strftime("%Y-%m-%d") if hasattr(v, "strftime") else None
 
         cap = num("marketCap")
         return {
@@ -267,6 +277,8 @@ def get_fundamentals(ticker: str, market: str, currency: str) -> dict:
             "pbr": num("priceToBook"),
             "div_yield": num("dividendYield"),
             "market_cap": _fmt_cap(cap, currency) if cap else None,
+            "earnings_date": date_of(cal.get("Earnings Date")),
+            "ex_div_date": date_of(cal.get("Ex-Dividend Date")),
         }
     return _cached_ttl(("fund", yft), _p, 3600)  # 1 hour
 

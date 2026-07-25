@@ -70,7 +70,7 @@
     <span class="fv">{{ value }}</span>
   </div>
 {% endmacro %}
-{% if fund and (fund.per or fund.forward_per or fund.eps or fund.pbr or fund.div_yield or fund.market_cap) %}
+{% if fund and (fund.per or fund.forward_per or fund.eps or fund.pbr or fund.div_yield or fund.market_cap or fund.earnings_date or fund.ex_div_date) %}
 <div class="card">
   <div class="acc-head"><span class="n">기업 지표 <span class="muted" style="font-size:12px; font-weight:400;">(지표 이름에 마우스를 올리면 설명)</span></span></div>
   <div class="fund-grid">
@@ -80,6 +80,8 @@
     {% if fund.eps is not none %}{{ metric('EPS', money(fund.eps, p.currency), 'EPS = 주당순이익. 주식 1주가 1년에 벌어들이는 순이익. 클수록 수익성이 좋습니다.') }}{% endif %}
     {% if fund.div_yield is not none %}{{ metric('배당수익률', '%.2f'|format(fund.div_yield) ~ '%', '배당수익률 = 1년 배당금 ÷ 주가. 주가 대비 배당을 얼마나 주는지. 은행 이자율과 비슷한 개념.') }}{% endif %}
     {% if fund.market_cap %}{{ metric('시가총액', fund.market_cap, '시가총액 = 주가 × 전체 주식 수. 회사 전체의 시장 가치(회사 크기)입니다.') }}{% endif %}
+    {% if fund.earnings_date %}{{ metric('실적 발표일', fund.earnings_date, '다음 분기 실적을 발표하는 예정일. 발표 전후로 주가 변동이 커질 수 있어요. (예정일이라 바뀔 수 있음)') }}{% endif %}
+    {% if fund.ex_div_date %}{{ metric('배당락일', fund.ex_div_date, '이 날 전까지 주식을 보유해야 배당을 받습니다. 배당락일에는 배당만큼 주가가 조정될 수 있어요.') }}{% endif %}
   </div>
 </div>
 {% endif %}
