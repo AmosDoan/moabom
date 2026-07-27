@@ -13,6 +13,13 @@
 {%- endmacro -%}
 <style>
   .asof { font-size:12px; color:var(--muted); }
+  @keyframes cellflash { 0% { background:rgba(250,204,21,.32); } 100% { background:transparent; } }
+  .flash { animation:cellflash 1.1s ease-out; border-radius:4px; }
+  #live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#0ca30c;
+              vertical-align:middle; opacity:.35; }
+  @keyframes beat { 0% { transform:scale(1.8); opacity:1; box-shadow:0 0 0 4px rgba(12,163,12,.25); }
+                    100% { transform:scale(1); opacity:.35; box-shadow:0 0 0 0 rgba(12,163,12,0); } }
+  #live-dot.beat { animation:beat 1s ease-out; }
   .tk { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.3px; }
   .markets { display:flex; gap:8px; flex-wrap:wrap; }
   .mkt { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
@@ -119,7 +126,7 @@
       <div class="value">$ <span id="fx">{{ "{:,.1f}".format(d.fx) }}</span>
         <span class="muted" style="font-size:14px;">· 100엔 <span id="fxjpy100">{{ "{:,.0f}".format(d.fx_jpy * 100) }}</span>원</span>
       </div>
-      <div class="asof" id="asof">{% if priced_at %}시세 기준 {{ priced_at }} · 30초 자동 갱신{% endif %}</div>
+      <div class="asof">{% if priced_at %}시세 기준 <span id="asof-t">{{ priced_at }}</span> · 30초 자동 갱신 <span id="live-dot" title="실시간 갱신 중"></span>{% endif %}</div>
     </div>
   </div>
 </div>
@@ -387,7 +394,11 @@
 
 <script>
 (function () {
-  function setText(el, val) { if (el && val != null) el.textContent = val; }
+  function flash(el) { if (!el) return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  function setText(el, val) {
+    if (!el || val == null) return;
+    if (el.textContent !== String(val)) { el.textContent = val; flash(el); }
+  }
   function setSign(el, up) {
     if (!el) return;
     el.classList.toggle('up', up); el.classList.toggle('down', !up);
@@ -397,6 +408,7 @@
       const res = await fetch('/api/live', { headers: { 'Accept': 'application/json' } });
       if (!res.ok) return;
       const d = await res.json();
+      var beat = document.getElementById('live-dot'); if (beat) { beat.classList.remove('beat'); void beat.offsetWidth; beat.classList.add('beat'); }
       if (d.markets) {
         var ms = document.getElementById('market-status');
         if (ms) ms.innerHTML = d.markets.map(function (m) {
@@ -408,7 +420,7 @@
       const tp = document.getElementById('total-pl'); setText(tp, d.total_pl + '원'); setSign(tp, d.total_up);
       setText(document.getElementById('fx'), d.fx);
       setText(document.getElementById('fxjpy100'), d.fx_jpy100);
-      if (d.priced_at) setText(document.getElementById('asof'), '시세 기준 ' + d.priced_at + ' · 30초 자동 갱신');
+      if (d.priced_at) setText(document.getElementById('asof-t'), d.priced_at);
       for (const id in d.rows) {
         const v = d.rows[id];
         const tr = document.querySelector('[data-live-id="' + id + '"]');
