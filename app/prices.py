@@ -102,15 +102,24 @@ _INDICES = {
 
 _MARKET_INFO = {
     "kr": {"name": "국내 (KRX)", "flag": "🇰🇷", "tzkey": "kst",
-           "hours": [("장 시작 동시호가", "08:30 ~ 09:00"), ("정규장", "09:00 ~ 15:30"),
-                     ("장 마감 동시호가", "15:20 ~ 15:30"), ("시간외 단일가", "16:00 ~ 18:00")]},
+           "hours": [("장 시작 동시호가", "08:30", "09:00"), ("정규장", "09:00", "15:30"),
+                     ("장 마감 동시호가", "15:20", "15:30"), ("시간외 단일가", "16:00", "18:00")]},
     "us": {"name": "미국 (NYSE/NASDAQ)", "flag": "🇺🇸", "tzkey": "et",
-           "hours": [("프리마켓", "04:00 ~ 09:30"), ("정규장", "09:30 ~ 16:00"),
-                     ("애프터마켓", "16:00 ~ 20:00")]},
+           "hours": [("프리마켓", "04:00", "09:30"), ("정규장", "09:30", "16:00"),
+                     ("애프터마켓", "16:00", "20:00")]},
     "jp": {"name": "일본 (TSE)", "flag": "🇯🇵", "tzkey": "jst",
-           "hours": [("전장", "09:00 ~ 11:30"), ("점심 휴장", "11:30 ~ 12:30"),
-                     ("후장", "12:30 ~ 15:30")]},
+           "hours": [("전장", "09:00", "11:30"), ("점심 휴장", "11:30", "12:30"),
+                     ("후장", "12:30", "15:30")]},
 }
+
+
+def _et_to_kst(hhmm: str) -> str | None:
+    """Convert a US-Eastern HH:MM to Korea time today (DST-aware)."""
+    if _ET is None or _KST is None:
+        return None
+    h, m = map(int, hhmm.split(":"))
+    d = datetime.now(_ET).date()
+    return datetime(d.year, d.month, d.day, h, m, tzinfo=_ET).astimezone(_KST).strftime("%H:%M")
 
 
 def market_detail(region: str) -> dict | None:
@@ -121,11 +130,21 @@ def market_detail(region: str) -> dict | None:
     session = {"kr": kr_session, "us": us_session, "jp": jp_session}[region]()
     now_local = datetime.now(tz).strftime("%Y-%m-%d %H:%M") if tz else "-"
     now_kst = datetime.now(_KST).strftime("%H:%M") if _KST else "-"
+    # US 장 시간엔 한국시간 병기 (서머타임 자동 반영)
+    hours = []
+    for label, s, e in info["hours"]:
+        kst = None
+        if region == "us":
+            ks, ke = _et_to_kst(s), _et_to_kst(e)
+            if ks and ke:
+                kst = f"{ks} ~ {ke}"
+        hours.append({"label": label, "time": f"{s} ~ {e}", "kst": kst})
     return {
         "region": region, "name": info["name"], "flag": info["flag"],
         "session": session, "state": _mkt_state(session),
-        "hours": info["hours"], "now_local": now_local, "now_kst": now_kst,
+        "hours": hours, "now_local": now_local, "now_kst": now_kst,
         "tz_label": {"kst": "한국시간", "et": "미 동부시간", "jst": "일본시간"}[info["tzkey"]],
+        "show_kst": region == "us",
     }
 
 
