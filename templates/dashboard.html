@@ -292,6 +292,7 @@
       dataLabels: { formatter: function (v) { return v.toFixed(1) + '%'; } },
       plotOptions: { pie: { donut: { size: '62%', labels: { show: true,
         total: { show: true, label: '합계', formatter: function (w) {
+          if (document.documentElement.classList.contains('priv-on')) return '••••••';
           return won(w.globals.seriesTotals.reduce(function (s, v) { return s + v; }, 0)) + '원'; } } } } } },
       tooltip: merge(base.tooltip, { y: { formatter: function (v) { return won(v) + '원'; } } }),
       stroke: { colors: [dark ? '#171b21' : '#fff'], width: 2 },

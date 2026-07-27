@@ -128,6 +128,7 @@
       e.preventDefault(); on = !on;
       try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
       apply(on);
+      location.reload();  // re-render charts so amounts inside SVG mask reliably (mobile)
     });
   })();
 
