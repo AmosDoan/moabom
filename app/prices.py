@@ -187,6 +187,9 @@ def priced_at() -> float | None:
 
 _REFRESHING: set = set()
 _REFRESH_LOCK = threading.Lock()
+# Serialize yf.download across threads: yfinance uses a shared global (_DFS) that
+# corrupts under concurrent multi-ticker downloads ("dictionary changed size...").
+_YF_LOCK = threading.Lock()
 
 
 def _bg_refresh(key, producer):
@@ -360,7 +363,8 @@ def _yf_prices(tickers: tuple) -> dict:
     def _p():
         _touch_fetch()
         out = {}
-        data = yf.download(list(tickers), period="7d", progress=False, group_by="ticker")
+        with _YF_LOCK:
+            data = yf.download(list(tickers), period="7d", progress=False, group_by="ticker", threads=False)
         for t in tickers:
             close = None
             try:
@@ -384,8 +388,9 @@ def _yf_live(tickers: tuple) -> dict:
     def _p():
         _touch_fetch()
         out = {}
-        data = yf.download(list(tickers), period="1d", interval="1m",
-                           prepost=True, progress=False, group_by="ticker")
+        with _YF_LOCK:
+            data = yf.download(list(tickers), period="1d", interval="1m",
+                               prepost=True, progress=False, group_by="ticker", threads=False)
         for t in tickers:
             close = None
             try:
@@ -411,7 +416,8 @@ def _yf_high(tickers: tuple) -> dict:
     def _p():
         out = {}
         try:
-            data = yf.download(list(tickers), period="1y", progress=False, group_by="ticker")
+            with _YF_LOCK:
+                data = yf.download(list(tickers), period="1y", progress=False, group_by="ticker", threads=False)
             for t in tickers:
                 high = None
                 try:
@@ -546,6 +552,13 @@ def enrich(positions: list[dict]) -> dict:
         else:
             pl_krw = pl_pct = None
 
+        # after-hours P/L (US pre/after-market): valuation with the extended-hours price
+        pl_krw_ext = pl_pct_ext = None
+        if live_price is not None and cost_krw is not None and shares is not None:
+            mkt_ext = to_krw(shares * live_price, cur)
+            pl_krw_ext = mkt_ext - cost_krw
+            pl_pct_ext = (pl_krw_ext / cost_krw * 100) if cost_krw else None
+
         rows.append(
             {
                 **p,
@@ -554,6 +567,8 @@ def enrich(positions: list[dict]) -> dict:
                 "mkt_krw": round(mkt_krw),
                 "pl_krw": round(pl_krw) if pl_krw is not None else None,
                 "pl_pct": (round(pl_pct, 1) + 0.0) if pl_pct is not None else None,
+                "pl_krw_ext": round(pl_krw_ext) if pl_krw_ext is not None else None,
+                "pl_pct_ext": (round(pl_pct_ext, 1) + 0.0) if pl_pct_ext is not None else None,
                 "chg_pct": (round(chg_pct, 1) + 0.0) if chg_pct is not None else None,
                 "buy": buy,
                 "live_price": live_price,
