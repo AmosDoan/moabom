@@ -400,10 +400,14 @@
   }
   var hl = document.getElementById('hdr-live');
   if (hl) hl.innerHTML = '<span id="live-dot" title="실시간 갱신 중"></span><span id="live-status">자동 갱신 중</span>';
+  var INTERVAL = 30000;
   var lastOk = Date.now();
+  var nextAt = Date.now() + INTERVAL;
   function relLabel() {
     var s = Math.round((Date.now() - lastOk) / 1000);
-    return s < 3 ? '방금 갱신' : s + '초 전 갱신';
+    var remain = Math.max(0, Math.round((nextAt - Date.now()) / 1000));
+    var fresh = s < 3 ? '방금 갱신' : s + '초 전 갱신';
+    return fresh + ' · 다음 ' + remain + '초';
   }
   function tick() {
     var el = document.getElementById('live-status');
@@ -411,6 +415,7 @@
   }
   setInterval(tick, 1000);
   async function live() {
+    nextAt = Date.now() + INTERVAL;
     try {
       const res = await fetch('/api/live', { headers: { 'Accept': 'application/json' } });
       if (!res.ok) return;
