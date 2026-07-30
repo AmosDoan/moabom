@@ -223,8 +223,8 @@
 <div class="card">
   <div class="acc-head nonstock-head">
     <span class="n">비주식 자산
-      <a class="muted" href="https://docs.google.com/spreadsheets/d/1nmtCUNBi62qzROUYhhDu8lhixucxPyK3jdhN8YISnhg/edit"
-         target="_blank" rel="noopener" onclick="event.stopPropagation()">구글 시트 열기 ↗</a>{% if banks %}<span class="exp">▾</span>{% endif %}
+      {% if sheet_url %}<a class="muted" href="{{ sheet_url }}"
+         target="_blank" rel="noopener" onclick="event.stopPropagation()">구글 시트 열기 ↗</a>{% endif %}{% if banks %}<span class="exp">▾</span>{% endif %}
     </span>
     <span class="v priv">{{ won(nonstock.total_krw) }}원</span>
   </div>

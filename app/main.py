@@ -25,7 +25,11 @@ from . import db, prices, sheets
 BASE = os.path.dirname(os.path.dirname(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
 
-USER = os.environ.get("ASSET_USER", "amos")
+USER = os.environ.get("ASSET_USER", "admin")
+SHEET_URL = (
+    f"https://docs.google.com/spreadsheets/d/{os.environ['ASSET_SHEET_ID']}/edit"
+    if os.environ.get("ASSET_SHEET_ID") else None
+)
 PASSWORD = os.environ.get("ASSET_PASSWORD", "changeme")
 
 
@@ -144,7 +148,10 @@ def seed_if_empty():
     db.init()
     if db.count() > 0:
         return
+    # Prefer the user's own seed; fall back to the bundled example on first run.
     csv_path = os.path.join(BASE, "seed_positions.csv")
+    if not os.path.exists(csv_path):
+        csv_path = os.path.join(BASE, "seed_positions.example.csv")
     if not os.path.exists(csv_path):
         return
     with open(csv_path, encoding="utf-8") as f:
@@ -300,7 +307,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         {"request": request, "d": data, "account_groups": account_groups, "top": top,
          "nonstock": nonstock, "banks": banks, "net_worth": net_worth,
          "financial_krw": financial_krw, "ex_pension_krw": ex_pension_krw,
-         "car_krw": car_krw, "w": weights,
+         "car_krw": car_krw, "w": weights, "sheet_url": SHEET_URL,
          "chart_data": json.dumps(chart_data, ensure_ascii=False),
          "markets": prices.market_status(), "priced_at": priced_at_str},
     )

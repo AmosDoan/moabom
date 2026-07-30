@@ -1,35 +1,75 @@
-# 자산 대시보드 (asset.mossol.net)
+# 모아봄 (moabom)
 
-나무증권 보유종목을 직접 입력해 두면, 무료 시세(FinanceDataReader/yfinance)와 환율을 붙여
-계좌별·종목별 평가손익·비중을 보여주는 개인용 대시보드입니다. 브로커 API를 쓰지 않습니다.
+> 내 자산을 **모아서 본다** — 주식·현금·기타 자산을 한 화면에 모아 보는 셀프호스트 대시보드.
 
-## 구성
-- FastAPI + Jinja2, SQLite(보유종목 저장)
-- HTTP Basic 인증(1인용). 비밀번호는 `ASSET_PASSWORD` 환경변수
-- US 티커(SKHY)는 yfinance, 국내 6자리 코드(005930)는 FinanceDataReader로 조회
-- 금·현금처럼 조회 불가 항목은 `market=MANUAL` + 수동 평가액
+증권사 API 없이, **무료 시세 데이터**(yfinance · FinanceDataReader)로 보유 종목의 현재가·평가손익·비중을 자동 계산합니다. 매매 내역을 직접 입력하면 평단이 자동으로 갱신되고, 차트·히트맵·종목 상세(뉴스·기업지표)까지 한 번에 볼 수 있어요.
 
-## 로컬 실행
+내 컴퓨터나 홈서버(NAS 등)에 Docker로 띄워 두고 혼자 쓰는 개인용 도구입니다. **데이터는 내 서버 밖으로 나가지 않습니다.**
+
+## 주요 기능
+
+- **보유 종목 관리** — 웹에서 직접 입력. 미국·국내·일본 주식, 현금, 금 등
+- **매수/매도 입력** — 수량·체결가만 넣으면 가중평균 평단·수량 자동 계산 + 변경 로그
+- **실시간 시세 자동 갱신** — 30초마다 현재가·평가손익 갱신 (무료 데이터라 실제 시세는 지연될 수 있음)
+- **차트** — 자산 구성 도넛, 순자산 추이, 계좌별 규모, **주식 히트맵**(크기=평가액, 색=수익률)
+- **종목 상세 페이지** — 6개월 가격 차트, 기업 지표(PER·PBR·EPS·배당·시가총액·실적발표일), 관련 뉴스
+- **시장 시간·지수** — 국내/미국/일본 개장 상태, 장 시간(미국은 한국시간 병기), 주요 지수(코스피·S&P500·나스닥·닛케이 등)
+- **비공개 모드** — 남에게 보여줄 때 구체적 금액만 가리고 비율·그래프는 유지
+- **다크/라이트 테마**, 모바일 대응, 로그인(비밀번호)
+
+## 빠른 시작 (Docker)
+
+필요한 것: Docker, Docker Compose.
+
 ```bash
-python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-ASSET_PASSWORD=원하는비번 ./.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8842
+git clone https://github.com/AmosDoan/moabom.git
+cd moabom
+
+# 환경변수 파일 준비
+cp .env.example .env
+# .env 를 열어 ASSET_USER / ASSET_PASSWORD 를 원하는 값으로 바꾸세요
+
+# 데이터 폴더(볼륨 마운트 대상) 미리 생성
+mkdir -p data
+
+# 실행
+docker compose up -d --build
 ```
 
-## NAS 배포 (Container Manager)
-1. `data/` 디렉토리를 NAS에 미리 생성(bind mount source, 자동생성 안 됨)
-2. 프로젝트를 NAS로 복사: `scp -O -r ./ mossol:/volume1/docker/asset/`
-3. `ASSET_PASSWORD`를 넣어 빌드/기동:
-   ```bash
-   ASSET_PASSWORD=원하는비번 docker compose up -d --build
-   ```
-4. DSM 리버스 프록시: `asset.mossol.net` → `localhost:8842` (WebSocket 불필요)
-5. Let's Encrypt SAN에 `asset.mossol.net` 추가, DNSZi A 레코드(NAS IP) 등록
-6. 첫 접속 시 `seed_positions.csv`로 보유종목 자동 시드(DB 비어있을 때만)
+브라우저에서 `http://localhost:8842` 접속 → `.env`에 넣은 아이디/비밀번호로 로그인.
 
-## 매매 후
-`종목 관리`에서 수량·평단만 수정하면 됩니다. 스크린샷 불필요.
+처음엔 예시 종목(`seed_positions.example.csv`)이 몇 개 들어가 있어요. **종목 관리**에서 본인 보유 종목으로 바꾸면 됩니다.
 
-## 데이터
-- 보유종목: `data/asset.db` (SQLite)
-- 시드: `seed_positions.csv`
-- 비주식 자산(은행/금/스톡옵션) 구글 시트 합산은 다음 단계(Task #4)
+## 환경변수 (`.env`)
+
+| 변수 | 설명 | 필수 |
+|---|---|---|
+| `ASSET_USER` | 로그인 아이디 | ✅ |
+| `ASSET_PASSWORD` | 로그인 초기 비밀번호 (웹에서 변경 가능) | ✅ |
+| `ASSET_SHEET_ID` | (선택) 구글 시트 연동용 시트 ID | |
+| `TZ` | 시간대 (기본 `Asia/Seoul`) | |
+
+## 데이터 · 보안
+
+- 보유 종목·비밀번호(해시)·변경 이력·순자산 스냅샷은 **SQLite**(`data/asset.db`)에 저장 — 전부 내 서버 안에만.
+- 시세·환율·뉴스·지수는 요청할 때마다 **무료 공개 API**에서 읽어오고 저장하지 않습니다.
+- 로그인 비밀번호는 평문이 아니라 해시(pbkdf2)로 저장됩니다.
+- `.env`, `data/`, 실제 보유 종목 파일은 git에 올라가지 않습니다(`.gitignore`).
+
+## 외부 노출 (선택)
+
+집 밖에서 접속하려면 리버스 프록시(Nginx, Caddy, Synology DSM 등)로 HTTPS를 붙여 `8842` 포트로 넘기면 됩니다. 금융 정보이니 **반드시 HTTPS + 강한 비밀번호**로 보호하세요. (또는 집 네트워크/VPN에서만 접속하는 것도 안전한 선택입니다.)
+
+## 구글 시트 연동 (선택 · 고급)
+
+주식 외 자산(은행 예적금·연금·기타)을 구글 시트로 관리한다면, 서비스 계정으로 시트를 읽어 대시보드에 합산할 수 있습니다. 시트 라벨 스캔 방식이라 **본인 시트 구조에 맞게 `app/sheets.py`를 손봐야** 합니다. 안 써도 대시보드는 정상 동작합니다(주식·현금·금만 표시).
+
+간단 절차: Google Cloud 서비스 계정 생성 → JSON 키를 `data/gsa.json`으로 저장 → 시트를 서비스 계정 이메일에 "뷰어" 공유 → `.env`에 `ASSET_SHEET_ID` 설정.
+
+## 기술 스택
+
+FastAPI · Jinja2 · SQLite · ApexCharts · yfinance · FinanceDataReader
+
+## 면책
+
+시세는 무료·지연 데이터이며, 이 도구는 **개인 자산 정리용**입니다. 투자 자문이 아니고, 표시되는 수치의 정확성을 보장하지 않습니다. 매매 판단과 책임은 본인에게 있습니다.

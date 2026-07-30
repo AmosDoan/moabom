@@ -1,14 +1,11 @@
-"""Read non-stock assets from the personal Google 자산 sheet via a service account.
+"""(선택) 구글 시트에서 주식 외 자산(예적금·연금 등)을 읽어 대시보드에 합산.
 
-Graceful: if the key file or sheet id is missing, returns None so the dashboard
-keeps working with stocks only.
+서비스 계정으로 시트를 읽습니다. 키 파일이나 시트 ID가 없으면 None을 돌려주고
+대시보드는 주식만으로 정상 동작합니다.
 
-Values in the sheet are in 만원 (10k KRW) units -> multiplied to KRW here.
-Only NON-stock, NON-duplicated items are pulled:
-  - 은행 총액   (예적금/파킹; sheet 달러칸은 0)
-  - 엔화
-금/달러/스톡옵션은 대시보드 DB에 이미 있으므로 제외
-  (금현물·USD현금 = 나무 계좌, LY 스톡옵션 = 4689.T 실시간 추적 종목)
+시트 라벨 스캔 방식이라 **본인 시트 구조에 맞게 아래 WANTED / get_banks 를 수정**하세요.
+이 예시는 col A 라벨이 "은행 총액", "엔화" 인 행을 찾아 만원(10k KRW) 단위로 읽습니다.
+DB에 이미 있는 자산(주식·금·현금 등)과 중복되지 않는 항목만 넣으세요.
 """
 from __future__ import annotations
 

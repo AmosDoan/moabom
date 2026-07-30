@@ -8,7 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY templates ./templates
 COPY static ./static
-COPY seed_positions.csv .
+# Copies seed_positions.example.csv always; your real seed_positions.csv too if present (gitignored)
+COPY seed_positions*.csv ./
 
 # data/ is a bind mount (SQLite persists on the host/NAS)
 ENV ASSET_DB=/srv/data/asset.db
