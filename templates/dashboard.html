@@ -20,6 +20,9 @@
   @keyframes beat { 0% { transform:scale(1.8); opacity:1; box-shadow:0 0 0 4px rgba(12,163,12,.25); }
                     100% { transform:scale(1); opacity:.35; box-shadow:0 0 0 0 rgba(12,163,12,0); } }
   #live-dot.beat { animation:beat 1s ease-out; }
+  #live-status.okflash { color:#0ca30c; font-weight:700; }
+  @keyframes statusflash { 0% { background:rgba(12,163,12,.22); } 100% { background:transparent; } }
+  #live-status.okflash { animation:statusflash 1.4s ease-out; border-radius:4px; padding:1px 4px; }
   .tk { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.3px; }
   .markets { display:flex; gap:8px; flex-wrap:wrap; }
   .mkt { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
@@ -126,7 +129,7 @@
       <div class="value">$ <span id="fx">{{ "{:,.1f}".format(d.fx) }}</span>
         <span class="muted" style="font-size:14px;">· 100엔 <span id="fxjpy100">{{ "{:,.0f}".format(d.fx_jpy * 100) }}</span>원</span>
       </div>
-      <div class="asof">{% if priced_at %}시세 기준 <span id="asof-t">{{ priced_at }}</span> · 30초 자동 갱신 <span id="live-dot" title="실시간 갱신 중"></span>{% endif %}</div>
+      <div class="asof">{% if priced_at %}<span id="live-dot" title="실시간 갱신 중"></span> <span id="live-status">자동 갱신 중</span> · 시세 기준 <span id="asof-t">{{ priced_at }}</span>{% endif %}</div>
     </div>
   </div>
 </div>
@@ -403,12 +406,25 @@
     if (!el) return;
     el.classList.toggle('up', up); el.classList.toggle('down', !up);
   }
+  var lastOk = Date.now();
+  function relLabel() {
+    var s = Math.round((Date.now() - lastOk) / 1000);
+    return s < 3 ? '방금 갱신' : s + '초 전 갱신';
+  }
+  function tick() {
+    var el = document.getElementById('live-status');
+    if (el && !el.classList.contains('okflash')) el.textContent = relLabel();
+  }
+  setInterval(tick, 1000);
   async function live() {
     try {
       const res = await fetch('/api/live', { headers: { 'Accept': 'application/json' } });
       if (!res.ok) return;
       const d = await res.json();
+      lastOk = Date.now();
       var beat = document.getElementById('live-dot'); if (beat) { beat.classList.remove('beat'); void beat.offsetWidth; beat.classList.add('beat'); }
+      var st = document.getElementById('live-status');
+      if (st) { st.textContent = '✓ 갱신됨'; st.classList.add('okflash'); setTimeout(function () { st.classList.remove('okflash'); }, 1400); }
       if (d.markets) {
         var ms = document.getElementById('market-status');
         if (ms) ms.innerHTML = d.markets.map(function (m) {
