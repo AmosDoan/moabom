@@ -24,6 +24,8 @@ from . import db, prices, sheets
 
 BASE = os.path.dirname(os.path.dirname(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
+VERSION = "1.0"
+templates.env.globals["VERSION"] = VERSION
 
 USER = os.environ.get("ASSET_USER", "admin")
 SHEET_URL = (

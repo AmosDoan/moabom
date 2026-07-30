@@ -17,9 +17,25 @@
 - **비공개 모드** — 남에게 보여줄 때 구체적 금액만 가리고 비율·그래프는 유지
 - **다크/라이트 테마**, 모바일 대응, 로그인(비밀번호)
 
-## 빠른 시작 (Docker)
+## 클로드로 자동 셋업 (권장 · 제일 쉬움)
 
-필요한 것: Docker, Docker Compose.
+터미널·Docker가 익숙하지 않아도 됩니다. [Claude Code](https://claude.ai/code)에게 맡기면 저장소를 보고 알아서 셋업해줘요.
+
+```bash
+git clone https://github.com/AmosDoan/moabom.git
+cd moabom
+claude          # 이 폴더에서 Claude Code 실행
+```
+
+그리고 클로드에게 이렇게 말하면 됩니다:
+
+> **"이 프로젝트 셋업해줘"**
+
+저장소에 포함된 `CLAUDE.md` 안내에 따라 클로드가 Docker 확인 → `.env` 생성(아이디·비밀번호는 물어봄) → 데이터 폴더 생성 → 실행 → 접속 안내까지 알아서 해줍니다. 이후 "다크모드 색 바꿔줘", "이 지표 추가해줘" 같은 것도 클로드에게 부탁하면 됩니다.
+
+## 빠른 시작 (Docker · 직접)
+
+직접 하려면 (필요한 것: Docker, Docker Compose):
 
 ```bash
 git clone https://github.com/AmosDoan/moabom.git
