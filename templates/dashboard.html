@@ -173,7 +173,7 @@
       {% for r in rows %}
         <tr class="hrow" data-live-id="{{ r.id }}">
           <td class="hname">{% if r.ticker %}<a href="/stock/{{ r.id }}" class="slink" onclick="event.stopPropagation()">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}{% if r.market == 'US' and r.ticker %} <span class="tk">{{ r.ticker }}</span>{% endif %}{% if r.stale %}<span class="stale"> (폴백)</span>{% endif %}<span class="exp">▾</span></td>
-          <td class="hc-price"><span class="c-price">{{ money(r.price, r.currency) }}</span>{% if r.chg_pct is not none %} <span class="c-chg {{ 'up' if r.chg_pct >= 0 else 'down' }}">({{ '+' if r.chg_pct >= 0 else '' }}{{ '%.1f'|format(r.chg_pct) }}%){% if r.buy %}🛒{% endif %}</span>{% endif %}</td>
+          <td class="hc-price"><span class="c-price">{{ money(r.price, r.currency) }}</span>{% if r.chg_pct is not none %} <span class="c-chg {{ 'up' if r.chg_pct >= 0 else 'down' }}">({{ '+' if r.chg_pct >= 0 else '' }}{{ '%.1f'|format(r.chg_pct) }}%){% if r.buy %}🛒{% endif %}</span>{% endif %}<div class="c-ext ext">{% if r.live_price %}<span class="tag">{{ r.live_session }}</span>{{ money(r.live_price, r.currency) }}{% endif %}</div></td>
           <td class="c-mkt priv">{{ '{:,.0f}'.format(r.mkt_krw) }}</td>
           <td class="c-pl priv {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw)) if r.pl_krw is not none else '-' }}</td>
           <td class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}</td>
