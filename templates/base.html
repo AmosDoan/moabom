@@ -72,8 +72,13 @@
   /* Privacy mode: blur concrete amounts, keep ratios/percentages visible */
   html.priv-on .priv { filter:blur(7px); -webkit-filter:blur(7px); user-select:none; }
   html.priv-on .priv-chart { filter:blur(9px); pointer-events:none; }
-  html.priv-on .priv-notip { pointer-events:none; }  /* keep ratio chart, hide amount tooltips */
+  html.priv-on .priv-notip { pointer-events:none; }  /* keep chart shape, hide amount tooltips */
   html.priv-on #chart-alloc .apexcharts-datalabel-value { filter:blur(7px); }  /* donut center total */
+  /* Privacy: show graph shape but hide the numeric amount labels */
+  html.priv-on #chart-net .apexcharts-yaxis-label,
+  html.priv-on #chart-stock .apexcharts-yaxis-label,
+  html.priv-on #chart-bars .apexcharts-xaxis-label,
+  html.priv-on #chart-bars .apexcharts-datalabels { opacity:0; }
   #priv-toggle { cursor:pointer; }
 </style>
 <script>
