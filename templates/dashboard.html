@@ -191,7 +191,7 @@
           <td class="hc-price"><span class="c-price">{{ money(r.price, r.currency) }}</span>{% if r.chg_pct is not none %} <span class="c-chg {{ 'up' if r.chg_pct >= 0 else 'down' }}">({{ '+' if r.chg_pct >= 0 else '' }}{{ '%.1f'|format(r.chg_pct) }}%){% if r.buy %}🛒{% endif %}</span>{% endif %}<div class="c-ext ext">{% if r.live_price %}<span class="tag">{{ r.live_session }}</span>{{ money(r.live_price, r.currency) }}{% endif %}</div></td>
           <td class="c-mkt priv">{{ '{:,.0f}'.format(r.mkt_krw) }}</td>
           <td class="priv"><span class="c-pl {{ 'up' if (r.pl_krw or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_krw >= 0 else '') ~ '{:,.0f}'.format(r.pl_krw)) if r.pl_krw is not none else '-' }}</span><div class="c-pl-ext ext">{% if r.pl_krw_ext is not none %}<span class="tag">시간외</span><span class="{{ 'up' if r.pl_krw_ext >= 0 else 'down' }}">{{ '+' if r.pl_krw_ext >= 0 else '' }}{{ '{:,.0f}'.format(r.pl_krw_ext) }}</span>{% endif %}</div></td>
-          <td class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}</td>
+          <td><span class="c-pct {{ 'up' if (r.pl_pct or 0) >= 0 else 'down' }}">{{ (('+' if r.pl_pct >= 0 else '') ~ r.pl_pct ~ '%') if r.pl_pct is not none else '-' }}</span><div class="c-pct-ext ext">{% if r.pl_pct_ext is not none %}<span class="tag">시간외</span><span class="{{ 'up' if r.pl_pct_ext >= 0 else 'down' }}">{{ '+' if r.pl_pct_ext >= 0 else '' }}{{ r.pl_pct_ext }}%</span>{% endif %}</div></td>
         </tr>
         <tr class="hdetail">
           <td colspan="5">
@@ -469,6 +469,11 @@
         if (ple) {
           if (v.pl_ext) ple.innerHTML = '<span class="tag">시간외</span><span class="' + (v.pl_ext_up ? 'up' : 'down') + '">' + v.pl_ext + '</span>';
           else ple.textContent = '';
+        }
+        var pce = tr.querySelector('.c-pct-ext');
+        if (pce) {
+          if (v.pl_pct_ext) pce.innerHTML = '<span class="tag">시간외</span><span class="' + (v.pl_ext_up ? 'up' : 'down') + '">' + v.pl_pct_ext + '</span>';
+          else pce.textContent = '';
         }
       }
     } catch (e) { /* keep last values on transient error */ }

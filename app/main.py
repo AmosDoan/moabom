@@ -587,6 +587,7 @@ def api_live(user: str = Depends(require_login)):
             "up": (pl or 0) >= 0,
             "pl_ext": (("+" if r["pl_krw_ext"] >= 0 else "") + f'{r["pl_krw_ext"]:,}') if r.get("pl_krw_ext") is not None else "",
             "pl_ext_up": (r.get("pl_krw_ext") or 0) >= 0,
+            "pl_pct_ext": (("+" if r["pl_pct_ext"] >= 0 else "") + f'{r["pl_pct_ext"]}%') if r.get("pl_pct_ext") is not None else "",
         }
     priced = (
         datetime.fromtimestamp(data["priced_at"]).strftime("%m-%d %H:%M")
