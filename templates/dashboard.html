@@ -63,6 +63,21 @@
 <div class="card">
   <div class="markets" id="market-status">{{ mkt_badges(markets) }}</div>
 </div>
+{% if ext_net_worth %}
+<div class="card" style="border-color:#eab308;">
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">🕒 시간외({{ us_session }}) 기준 순자산</div>
+      <div class="value priv" style="font-size:22px;">{{ won(ext_net_worth) }}원</div>
+    </div>
+    <div class="kpi">
+      <div class="label">정규장 대비</div>
+      <div class="value priv {{ 'up' if ext_delta >= 0 else 'down' }}" style="font-size:22px;">{{ '+' if ext_delta >= 0 else '' }}{{ won(ext_delta) }}원</div>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:6px;">미국 {{ us_session }} 가격을 반영한 추정치입니다(정규장 종가 기준 순자산에 시간외 변동분을 더함). 각 미국주식 현재가 아래 시간외 가격 참고.</p>
+</div>
+{% endif %}
 {% if nonstock %}
 <div class="card">
   <div class="kpis">

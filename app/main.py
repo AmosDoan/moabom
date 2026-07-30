@@ -220,6 +220,16 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     banks = sheets.get_banks()
     net_worth = data["total_krw"] + (nonstock["total_krw"] if nonstock else 0)
 
+    # US 프리/애프터마켓: 시간외 가격 기준 평가액(정규가와의 차이만큼 보정)
+    us_session = prices.us_session()
+    ext_delta = round(sum(
+        r["shares"] * (r["live_price"] - r["price"]) * data["fx"]
+        for r in data["rows"]
+        if r.get("live_price") and r.get("price") and r.get("shares")
+        and str(r.get("market") or "").upper() == "US"
+    )) if us_session in ("프리마켓", "애프터마켓") else 0
+    ext_net_worth = net_worth + ext_delta if ext_delta else None
+
     # category weights vs net worth
     stock_krw = sum(
         r["mkt_krw"] for r in data["rows"]
@@ -310,6 +320,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
          "nonstock": nonstock, "banks": banks, "net_worth": net_worth,
          "financial_krw": financial_krw, "ex_pension_krw": ex_pension_krw,
          "car_krw": car_krw, "w": weights, "sheet_url": SHEET_URL,
+         "us_session": us_session, "ext_delta": ext_delta, "ext_net_worth": ext_net_worth,
          "chart_data": json.dumps(chart_data, ensure_ascii=False),
          "markets": prices.market_status(), "priced_at": priced_at_str},
     )
