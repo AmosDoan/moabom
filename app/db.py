@@ -7,6 +7,10 @@ from contextlib import contextmanager
 
 DB_PATH = os.environ.get("ASSET_DB", os.path.join(os.path.dirname(__file__), "..", "data", "asset.db"))
 
+# Account categories the dashboard aggregates by. Order = display order in charts.
+CATEGORIES = ["주식", "예금현금", "연금", "실물자산", "기타"]
+DEFAULT_CATEGORY = "기타"
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS positions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +43,8 @@ CREATE TABLE IF NOT EXISTS net_worth_history (
 CREATE TABLE IF NOT EXISTS accounts (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT UNIQUE NOT NULL,
-    sort_order INTEGER DEFAULT 0
+    sort_order INTEGER DEFAULT 0,
+    category   TEXT DEFAULT '기타'
 );
 """
 
@@ -63,6 +68,10 @@ def init():
         cols = [r[1] for r in c.execute("PRAGMA table_info(positions)")]
         if "cost_krw" not in cols:
             c.execute("ALTER TABLE positions ADD COLUMN cost_krw REAL")
+        # migration: per-account category (for pre-category account rows)
+        acols = [r[1] for r in c.execute("PRAGMA table_info(accounts)")]
+        if "category" not in acols:
+            c.execute("ALTER TABLE accounts ADD COLUMN category TEXT DEFAULT '기타'")
         # seed the account list from any accounts already used by positions
         used = [r[0] for r in c.execute(
             "SELECT DISTINCT account FROM positions WHERE account IS NOT NULL AND account <> ''"
@@ -123,24 +132,40 @@ def net_worth_series(limit_days: int = 120):
 
 # --- accounts (user-managed portfolio groupings) ---
 def list_accounts():
-    """Account names in display order, each with its position count."""
+    """Account name/category in display order, each with its position count."""
     with conn() as c:
         return [dict(r) for r in c.execute(
-            "SELECT a.name, a.sort_order, "
+            "SELECT a.name, a.sort_order, COALESCE(a.category, '기타') AS category, "
             "  (SELECT COUNT(*) FROM positions p WHERE p.account = a.name) AS n "
             "FROM accounts a ORDER BY a.sort_order, a.id"
         )]
 
 
-def add_account(name: str):
+def account_categories():
+    """Map of account name -> category (defaulting to 기타)."""
+    return {a["name"]: a["category"] for a in list_accounts()}
+
+
+def set_account_category(name: str, category: str):
+    """Set an account's category. Ignores unknown categories."""
+    if category not in CATEGORIES:
+        return
+    with conn() as c:
+        c.execute("UPDATE accounts SET category=? WHERE name=?", (category, name))
+
+
+def add_account(name: str, category: str = DEFAULT_CATEGORY):
     """Register an account. No-op if it already exists. Returns True if created."""
     name = (name or "").strip()
     if not name:
         return False
+    if category not in CATEGORIES:
+        category = DEFAULT_CATEGORY
     with conn() as c:
         nxt = c.execute("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM accounts").fetchone()[0]
         cur = c.execute(
-            "INSERT OR IGNORE INTO accounts (name, sort_order) VALUES (?, ?)", (name, nxt)
+            "INSERT OR IGNORE INTO accounts (name, sort_order, category) VALUES (?, ?, ?)",
+            (name, nxt, category),
         )
         return cur.rowcount > 0
 

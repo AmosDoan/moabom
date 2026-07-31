@@ -8,8 +8,10 @@
   .flash { background:#fde8e8; color:#a11; border:1px solid #f5c2c2; border-radius:8px;
            padding:10px 12px; margin-bottom:12px; font-size:14px; }
   html[data-theme="dark"] .flash { background:#3a2020; color:#f3b0b0; border-color:#5a2f2f; }
-  .add-acct { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .add-acct { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
   .add-acct input { max-width:220px; }
+  .cat-select { padding:4px 8px; font-size:12px; border-radius:6px;
+                border:1px solid var(--line); background:var(--card); color:inherit; }
   .name-cell .tk { color:var(--muted); font-size:12px; margin-left:4px; }
 </style>
 
@@ -20,6 +22,14 @@
   <div class="acc-head">
     <span class="n">{{ g.name }} <span class="muted" style="font-size:12px;">· {{ g.rows|length }}종목</span></span>
     <span class="acct-actions">
+      <form class="inline" method="post" action="/accounts/category">
+        <input type="hidden" name="name" value="{{ g.name }}">
+        <select name="category" class="cat-select" onchange="this.form.submit()" title="분류">
+          {% for c in categories %}
+          <option value="{{ c }}" {{ 'selected' if g.category == c else '' }}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </form>
       <a class="btn primary" href="/positions/new?account={{ g.name | urlencode }}">+ 종목 추가</a>
       <button class="btn" type="button" onclick="renameAcct('{{ g.name }}')">이름 변경</button>
       <form class="inline" method="post" action="/accounts/delete"
@@ -66,9 +76,12 @@
   <div class="acc-head"><span class="n">계좌 추가</span></div>
   <form class="add-acct" method="post" action="/accounts">
     <input name="name" placeholder="예: 종합매매 / ISA / 연금저축 / 예적금" required>
+    <select name="category" class="cat-select" title="분류">
+      {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
     <button class="btn primary" type="submit">계좌 만들기</button>
   </form>
-  <p class="muted" style="margin-top:8px;">계좌는 종목을 묶는 그룹입니다. 증권 계좌뿐 아니라 예적금·금·차량 같은 자산 묶음으로도 쓸 수 있습니다.</p>
+  <p class="muted" style="margin-top:8px;">계좌는 종목을 묶는 그룹입니다. 증권 계좌뿐 아니라 예적금·금·차량 같은 자산 묶음으로도 쓸 수 있습니다. 분류는 대시보드 「분류별 비중」 집계에 쓰입니다.</p>
 </div>
 
 <form id="rename-form" method="post" action="/accounts/rename" style="display:none;">

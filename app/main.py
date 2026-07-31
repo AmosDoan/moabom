@@ -214,40 +214,24 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     )) if us_session in ("프리마켓", "애프터마켓") else 0
     ext_net_worth = net_worth + ext_delta if ext_delta else None
 
-    # category weights vs net worth
-    stock_krw = sum(
-        r["mkt_krw"] for r in data["rows"]
-        if str(r.get("market") or "").upper() in ("US", "KR", "JP") and r.get("ticker")
-    )
-    deposit_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "예적금")
-    car_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "자동차")
-    gold_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "금현물")
-    pension_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "연금저축")
-    financial_krw = net_worth - car_krw  # 차 제외 금융자산
-    ex_pension_krw = net_worth - pension_krw  # 연금저축 제외 자산
-    etc_krw = max(net_worth - stock_krw - deposit_krw - gold_krw - car_krw, 0)  # 현금·엔화 등
+    # aggregate every holding by its account's category (fully user-configurable)
+    acct_cat = db.account_categories()
+    cat_totals = {c: 0.0 for c in db.CATEGORIES}
+    for r in data["rows"]:
+        cat = acct_cat.get(r.get("account") or "", db.DEFAULT_CATEGORY)
+        cat_totals[cat] = cat_totals.get(cat, 0.0) + r["mkt_krw"]
+
+    real_krw = cat_totals.get("실물자산", 0.0)      # 금·부동산·차 등
+    financial_krw = net_worth - real_krw            # 금융자산 = 실물 제외
     pct = lambda v: round(v / net_worth * 100, 1) if net_worth else 0
-    weights = {"stock_pct": pct(stock_krw), "deposit_pct": pct(deposit_krw), "car_pct": pct(car_krw)}
+    cat_weights = [
+        {"name": c, "krw": cat_totals[c], "pct": pct(cat_totals[c])}
+        for c in db.CATEGORIES if cat_totals[c] > 0
+    ]
 
     # --- chart data (rendered client-side by ApexCharts) ---
-    def by(acc=None, market=None):
-        return sum(
-            r["mkt_krw"] for r in data["rows"]
-            if (acc is None or (r.get("account") or "") == acc)
-            and (market is None or str(r.get("market") or "").upper() == market)
-        )
-
-    # 종합매매 = 미국주식 + 국내주식 + 현금(USD); 나머지는 계좌 단위
-    alloc = [
-        {"name": "미국주식", "krw": by("종합매매", "US")},
-        {"name": "예적금", "krw": deposit_krw},
-        {"name": "LY 스옵", "krw": by("스톡옵션")},
-        {"name": "차량", "krw": car_krw},
-        {"name": "ISA", "krw": by("ISA")},
-        {"name": "국내주식", "krw": by("종합매매", "KR")},
-        {"name": "금", "krw": gold_krw},
-        {"name": "기타", "krw": pension_krw + by("종합매매", "MANUAL")},
-    ]
+    # 자산 구성 도넛 = category breakdown
+    alloc = [{"name": c["name"], "krw": c["krw"]} for c in cat_weights]
     bar_items = [{"name": a["account"], "krw": a["mkt_krw"]} for a in data["accounts"]]
     bar_items.sort(key=lambda b: b["krw"], reverse=True)
 
@@ -293,8 +277,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         "dashboard.html",
         {"request": request, "d": data, "account_groups": account_groups, "top": top,
          "net_worth": net_worth,
-         "financial_krw": financial_krw, "ex_pension_krw": ex_pension_krw,
-         "car_krw": car_krw, "w": weights,
+         "financial_krw": financial_krw, "real_krw": real_krw, "cat_weights": cat_weights,
          "us_session": us_session, "ext_delta": ext_delta, "ext_net_worth": ext_net_worth,
          "chart_data": json.dumps(chart_data, ensure_ascii=False),
          "markets": prices.market_status(), "priced_at": priced_at_str},
@@ -309,17 +292,29 @@ def positions(request: Request, user: str = Depends(require_login)):
     by_acc = {a["name"]: [] for a in accounts}
     for r in rows:
         by_acc.setdefault(r.get("account") or "", []).append(r)
-    groups = [{"name": a["name"], "rows": by_acc.get(a["name"], [])} for a in accounts]
+    groups = [
+        {"name": a["name"], "category": a["category"], "rows": by_acc.get(a["name"], [])}
+        for a in accounts
+    ]
     flash = request.session.pop("flash", None)
     return templates.TemplateResponse(
         "positions.html",
-        {"request": request, "groups": groups, "accounts": accounts, "flash": flash},
+        {"request": request, "groups": groups, "accounts": accounts,
+         "categories": db.CATEGORIES, "flash": flash},
     )
 
 
 @app.post("/accounts")
-def account_add(request: Request, user: str = Depends(require_login), name: str = Form(...)):
-    db.add_account(name)
+def account_add(request: Request, user: str = Depends(require_login),
+                name: str = Form(...), category: str = Form(db.DEFAULT_CATEGORY)):
+    db.add_account(name, category)
+    return RedirectResponse("/positions", status_code=303)
+
+
+@app.post("/accounts/category")
+def account_category(request: Request, user: str = Depends(require_login),
+                     name: str = Form(...), category: str = Form(...)):
+    db.set_account_category(name, category)
     return RedirectResponse("/positions", status_code=303)
 
 

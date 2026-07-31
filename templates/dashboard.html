@@ -80,42 +80,33 @@
       <div class="value priv" style="font-size:22px;">{{ won(net_worth) }}원</div>
     </div>
     <div class="kpi">
-      <div class="label">연금 제외 자산</div>
-      <div class="value priv" style="font-size:22px;">{{ won(ex_pension_krw) }}원</div>
-    </div>
-    <div class="kpi">
-      <div class="label">금융자산 (차 제외)</div>
+      <div class="label">금융자산 <span class="muted" style="font-size:11px;">(실물 제외)</span></div>
       <div class="value priv" style="font-size:22px;">{{ won(financial_krw) }}원</div>
     </div>
     <div class="kpi">
-      <div class="label">차량 가치</div>
-      <div class="value priv" style="font-size:22px;">{{ won(car_krw) }}원</div>
+      <div class="label">실물자산</div>
+      <div class="value priv" style="font-size:22px;">{{ won(real_krw) }}원</div>
     </div>
   </div>
 </div>
+{% if cat_weights %}
 <div class="card">
+  <div class="acc-head"><span class="n">분류별 비중</span></div>
   <div class="kpis">
+    {% for c in cat_weights %}
     <div class="kpi">
-      <div class="label">주식 비중</div>
-      <div class="value">{{ w.stock_pct }}%</div>
-      <div class="bar" style="margin-top:6px;"><span style="width:{{ w.stock_pct }}%"></span></div>
+      <div class="label">{{ c.name }}</div>
+      <div class="value">{{ c.pct }}%</div>
+      <div class="bar" style="margin-top:6px;"><span style="width:{{ c.pct }}%"></span></div>
     </div>
-    <div class="kpi">
-      <div class="label">예적금 비중</div>
-      <div class="value">{{ w.deposit_pct }}%</div>
-      <div class="bar" style="margin-top:6px;"><span style="width:{{ w.deposit_pct }}%"></span></div>
-    </div>
-    <div class="kpi">
-      <div class="label">차 비중</div>
-      <div class="value">{{ w.car_pct }}%</div>
-      <div class="bar" style="margin-top:6px;"><span style="width:{{ w.car_pct }}%"></span></div>
-    </div>
+    {% endfor %}
   </div>
 </div>
+{% endif %}
 <div class="card">
   <div class="kpis">
     <div class="kpi">
-      <div class="label">주식·금·현금 평가액</div>
+      <div class="label">보유자산 평가액</div>
       <div class="value"><span id="total-krw" class="priv">{{ won(d.total_krw) }}</span>원</div>
     </div>
     <div class="kpi">
