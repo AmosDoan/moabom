@@ -20,7 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from datetime import datetime
 
-from . import db, prices, sheets
+from . import db, prices
 
 BASE = os.path.dirname(os.path.dirname(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
@@ -28,10 +28,6 @@ VERSION = "1.0"
 templates.env.globals["VERSION"] = VERSION
 
 USER = os.environ.get("ASSET_USER", "admin")
-SHEET_URL = (
-    f"https://docs.google.com/spreadsheets/d/{os.environ['ASSET_SHEET_ID']}/edit"
-    if os.environ.get("ASSET_SHEET_ID") else None
-)
 PASSWORD = os.environ.get("ASSET_PASSWORD", "changeme")
 
 
@@ -174,44 +170,10 @@ def seed_if_empty():
 
 seed_if_empty()
 
-# Warm the price + sheet caches at startup (off the request path) so first load is instant.
+# Warm the price cache at startup (off the request path) so the first load is instant.
 import threading as _threading
 
-
-def _warm_all():
-    prices.warm(db.all_positions())
-    for fn in (sheets.get_nonstock, sheets.get_banks, sheets.get_stock_history):
-        try:
-            fn()
-        except Exception:
-            pass
-
-
-_threading.Thread(target=_warm_all, daemon=True).start()
-
-
-def _daily_backup_loop():
-    """(선택) 매일 종합매매 주식 평가액(만원)을 구글시트 'Stock' 탭에 백업.
-    ASSET_BACKUP_SHEET_ID + 서비스계정 편집자 권한이 있어야 동작."""
-    import time as _t
-    while True:
-        try:
-            if sheets.backup_available():
-                data = prices.enrich(db.all_positions())
-                val = sum(
-                    r["mkt_krw"] for r in data["rows"]
-                    if (r.get("account") or "") == "종합매매"
-                    and str(r.get("market") or "").upper() in ("US", "KR", "JP")
-                    and r.get("ticker")
-                )
-                sheets.backup_stock(datetime.now().strftime("%Y.%m.%d"), round(val / 10000))
-        except Exception:
-            pass
-        _t.sleep(6 * 3600)  # 6시간마다 (당일 행 갱신)
-
-
-if sheets.backup_available():
-    _threading.Thread(target=_daily_backup_loop, daemon=True).start()
+_threading.Thread(target=lambda: prices.warm(db.all_positions()), daemon=True).start()
 
 
 def _account_view(accounts):
@@ -240,9 +202,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     data = prices.enrich(db.all_positions())
     account_groups = _account_view(data["accounts"])
     top = sorted(data["rows"], key=lambda r: r["mkt_krw"], reverse=True)[:8]
-    nonstock = sheets.get_nonstock()  # None until Google 시트 연동됨
-    banks = sheets.get_banks()
-    net_worth = data["total_krw"] + (nonstock["total_krw"] if nonstock else 0)
+    net_worth = data["total_krw"]  # 모든 자산이 DB에 있음 (은행·현금·금·차 포함)
 
     # US 프리/애프터마켓: 시간외 가격 기준 평가액(정규가와의 차이만큼 보정)
     us_session = prices.us_session()
@@ -259,7 +219,7 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         r["mkt_krw"] for r in data["rows"]
         if str(r.get("market") or "").upper() in ("US", "KR", "JP") and r.get("ticker")
     )
-    deposit_krw = sum(b["krw"] for b in banks) if banks else 0
+    deposit_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "예적금")
     car_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "자동차")
     gold_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "금현물")
     pension_krw = sum(r["mkt_krw"] for r in data["rows"] if (r.get("account") or "") == "연금저축")
@@ -277,7 +237,6 @@ def dashboard(request: Request, user: str = Depends(require_login)):
             and (market is None or str(r.get("market") or "").upper() == market)
         )
 
-    yen_krw = next((a["krw"] for a in nonstock["assets"] if a["name"] == "엔화"), 0) if nonstock else 0
     # 종합매매 = 미국주식 + 국내주식 + 현금(USD); 나머지는 계좌 단위
     alloc = [
         {"name": "미국주식", "krw": by("종합매매", "US")},
@@ -287,22 +246,15 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         {"name": "ISA", "krw": by("ISA")},
         {"name": "국내주식", "krw": by("종합매매", "KR")},
         {"name": "금", "krw": gold_krw},
-        {"name": "기타", "krw": pension_krw + by("종합매매", "MANUAL") + yen_krw},
+        {"name": "기타", "krw": pension_krw + by("종합매매", "MANUAL")},
     ]
     bar_items = [{"name": a["account"], "krw": a["mkt_krw"]} for a in data["accounts"]]
-    if deposit_krw:
-        bar_items.append({"name": "은행 예적금", "krw": deposit_krw})
-    if nonstock:
-        yen = next((a["krw"] for a in nonstock["assets"] if a["name"] == "엔화"), 0)
-        if yen:
-            bar_items.append({"name": "엔화", "krw": yen})
     bar_items.sort(key=lambda b: b["krw"], reverse=True)
 
     # net worth history: snapshot today, then read series
     today = datetime.now().strftime("%Y-%m-%d")
     db.record_net_worth(today, net_worth)
     series = db.net_worth_series(120)
-    stock_hist = sheets.get_stock_history() or []
 
     # heatmap: each stock tile sized by value, colored by return %.
     # Fold holdings under 1% of the total into a single 기타 tile so small tiles stay readable.
@@ -329,7 +281,6 @@ def dashboard(request: Request, user: str = Depends(require_login)):
         "alloc": [a for a in alloc if a["krw"] > 0],
         "bars": bar_items,
         "net": series,
-        "stock": stock_hist,
         "heatmap": heatmap,
     }
 
@@ -341,9 +292,9 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     return templates.TemplateResponse(
         "dashboard.html",
         {"request": request, "d": data, "account_groups": account_groups, "top": top,
-         "nonstock": nonstock, "banks": banks, "net_worth": net_worth,
+         "net_worth": net_worth,
          "financial_krw": financial_krw, "ex_pension_krw": ex_pension_krw,
-         "car_krw": car_krw, "w": weights, "sheet_url": SHEET_URL,
+         "car_krw": car_krw, "w": weights,
          "us_session": us_session, "ext_delta": ext_delta, "ext_net_worth": ext_net_worth,
          "chart_data": json.dumps(chart_data, ensure_ascii=False),
          "markets": prices.market_status(), "priced_at": priced_at_str},

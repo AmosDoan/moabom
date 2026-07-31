@@ -53,11 +53,6 @@
   .subhead { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
              margin:14px 2px 4px; padding-top:8px; font-weight:700; font-size:13px; border-top:1px dashed var(--line); }
   .subhead .v { font-size:12px; font-weight:600; color:var(--muted); }
-  .nonstock-head { cursor:pointer; }
-  .nonstock-head .exp { color:var(--muted); font-size:10px; margin-left:6px; display:inline-block; transition:transform .15s; }
-  .nonstock-head.open .exp { transform:rotate(180deg); }
-  .nonstock-detail { display:none; }
-  .nonstock-detail.open { display:block; }
 </style>
 
 <div class="card">
@@ -78,7 +73,6 @@
   <p class="muted" style="margin-top:6px;">미국 {{ us_session }} 가격을 반영한 추정치입니다(정규장 종가 기준 순자산에 시간외 변동분을 더함). 각 미국주식 현재가 아래 시간외 가격 참고.</p>
 </div>
 {% endif %}
-{% if nonstock %}
 <div class="card">
   <div class="kpis">
     <div class="kpi">
@@ -118,11 +112,10 @@
     </div>
   </div>
 </div>
-{% endif %}
 <div class="card">
   <div class="kpis">
     <div class="kpi">
-      <div class="label">{{ '주식·금·현금 평가액' if nonstock else '총 평가액' }}</div>
+      <div class="label">주식·금·현금 평가액</div>
       <div class="value"><span id="total-krw" class="priv">{{ won(d.total_krw) }}</span>원</div>
     </div>
     <div class="kpi">
@@ -158,11 +151,6 @@
   <div class="acc-head"><span class="n">순자산 추이</span></div>
   <div id="chart-net" class="priv-notip"></div>
   <p class="muted" id="net-empty" style="display:none;">추이 그래프는 기록이 이틀 이상 쌓이면 표시됩니다. (오늘 첫 스냅샷 저장됨)</p>
-</div>
-
-<div class="card">
-  <div class="acc-head"><span class="n">주식 평가액 추이 <span class="muted">(구글 시트 기록)</span></span></div>
-  <div id="chart-stock" class="priv-notip"></div>
 </div>
 
 <div class="card">
@@ -229,54 +217,6 @@
 </div>
 {% endfor %}
 
-{% if nonstock %}
-<div class="card">
-  <div class="acc-head nonstock-head">
-    <span class="n">비주식 자산
-      {% if sheet_url %}<a class="muted" href="{{ sheet_url }}"
-         target="_blank" rel="noopener" onclick="event.stopPropagation()">구글 시트 열기 ↗</a>{% endif %}{% if banks %}<span class="exp">▾</span>{% endif %}
-    </span>
-    <span class="v priv">{{ won(nonstock.total_krw) }}원</span>
-  </div>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>항목</th><th>평가액(원)</th></tr></thead>
-      <tbody>
-      {% for i in nonstock.assets %}
-        {% if i.name == '은행 예적금' and banks %}
-        <tr class="bank-row"><td>{{ i.name }} <span class="exp">▾</span></td><td class="priv">{{ won(i.krw) }}</td></tr>
-        {% else %}
-        <tr><td>{{ i.name }}</td><td class="priv">{{ won(i.krw) }}</td></tr>
-        {% endif %}
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <p class="muted" style="margin-top:8px;">금·달러는 위 계좌(금현물·USD현금)와 중복이라 제외했습니다. 시트 값은 15분 캐시.{% if banks %} 카드를 누르면 은행 예적금 상세가 펼쳐집니다.{% endif %}</p>
-
-  {% if banks %}
-  <div class="nonstock-detail">
-    <div class="subhead"><span>은행 예적금 상세</span><span class="v priv">{{ won(banks | sum(attribute='krw')) }}원</span></div>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>은행</th><th>금액(원)</th><th>만기일</th><th>금리</th></tr></thead>
-        <tbody>
-        {% for b in banks %}
-          <tr>
-            <td>{{ b.name }}</td>
-            <td class="priv">{{ won(b.krw) }}</td>
-            <td class="muted">{{ b.maturity or '-' }}</td>
-            <td class="muted">{{ b.rate or '-' }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-</div>
-{% endif %}
-
 <p class="muted">시세는 30초마다 자동 갱신됩니다 (무료 데이터라 실제 시세는 지연될 수 있어요). ▲빨강=상승 ▼파랑=하락(전일 종가 대비). 🛒 = 전일 대비 3% 이상 하락(단순 참고 표시일 뿐, 투자 자문 아닙니다). 매매 후에는 <a href="/positions">종목 관리</a>에서 수량·평단을 수정해 주세요.</p>
 
 <script id="chart-data" type="application/json">{{ chart_data|safe }}</script>
@@ -331,21 +271,6 @@
     })).render();
   } else {
     document.getElementById('net-empty').style.display = 'block';
-  }
-
-  // 3) 주식 평가액 추이 (구글 시트, 불규칙 날짜)
-  if (D.stock && D.stock.length >= 2) {
-    new ApexCharts(document.getElementById('chart-stock'), merge(base, {
-      chart: merge(base.chart, { type: 'area', height: 240 }),
-      series: [{ name: '주식 평가액', data: D.stock.map(function (p) { return [p.day, p.krw]; }) }],
-      colors: [PAL[1]],
-      xaxis: { type: 'datetime' },
-      yaxis: { labels: { formatter: function (v) { return (v / 1e8).toFixed(2) + '억'; } } },
-      stroke: { curve: 'smooth', width: 2 },
-      fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0.03 } },
-      dataLabels: { enabled: false },
-      tooltip: merge(base.tooltip, { x: { format: 'yyyy-MM-dd' }, y: { formatter: function (v) { return won(v) + '원'; } } }),
-    })).render();
   }
 
   // 3b) 주식 히트맵 (트리맵: 크기=평가액, 색=수익률 diverging 빨강↔파랑)
@@ -491,15 +416,6 @@
       if (!d || !d.classList.contains('hdetail')) return;
       var open = d.classList.toggle('open');
       row.classList.toggle('open', open);
-    });
-  });
-  document.querySelectorAll('.nonstock-head, .bank-row').forEach(function (el) {
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', function () {
-      var d = el.closest('.card').querySelector('.nonstock-detail');
-      if (!d) return;
-      var open = d.classList.toggle('open');
-      var arrow = el.querySelector('.exp'); if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
     });
   });
 })();

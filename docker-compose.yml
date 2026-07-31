@@ -14,7 +14,4 @@ services:
     environment:
       - ASSET_USER=${ASSET_USER:?set ASSET_USER}
       - ASSET_PASSWORD=${ASSET_PASSWORD:?set ASSET_PASSWORD}
-      - ASSET_SHEET_ID=${ASSET_SHEET_ID:-}                  # (선택) 대시보드 읽기 연동
-      - ASSET_BACKUP_SHEET_ID=${ASSET_BACKUP_SHEET_ID:-}    # (선택) Stock 탭 백업 쓰기(편집자 권한 필요)
-      - GOOGLE_SA_KEY=/srv/data/gsa.json
       - TZ=Asia/Seoul

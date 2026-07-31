@@ -5,7 +5,7 @@
 ## 처음 사용자 자동 셋업 (사용자가 "셋업해줘"라고 하면 이 순서대로)
 
 1. **Docker 확인**: `docker --version`, `docker compose version`. 없으면 설치를 안내한다.
-2. **`.env` 생성**: `.env.example`을 `.env`로 복사. `ASSET_USER`는 사용자에게 원하는 아이디를 묻고, `ASSET_PASSWORD`는 강한 값을 제안하거나 사용자가 직접 넣게 한다(평문을 대화에 남기지 말 것). `ASSET_SHEET_ID`는 비워 둔다(선택 기능).
+2. **`.env` 생성**: `.env.example`을 `.env`로 복사. `ASSET_USER`는 사용자에게 원하는 아이디를 묻고, `ASSET_PASSWORD`는 강한 값을 제안하거나 사용자가 직접 넣게 한다(평문을 대화에 남기지 말 것).
 3. **데이터 폴더**: `mkdir -p data` (SQLite·비밀키가 저장되는 볼륨 마운트 대상).
 4. **실행**: `docker compose up -d --build`.
 5. **확인**: 잠시 후 `curl -s http://localhost:8842/health` 가 `{"ok":true}` 인지 확인. 사용자에게 브라우저로 `http://localhost:8842` 접속 → `.env`의 아이디/비밀번호로 로그인하라고 안내.
@@ -19,14 +19,13 @@
 
 ## 환경변수
 
-`ASSET_USER`(필수) · `ASSET_PASSWORD`(필수, 웹에서 변경 가능) · `ASSET_SHEET_ID`(선택) · `TZ`(기본 Asia/Seoul).
+`ASSET_USER`(필수) · `ASSET_PASSWORD`(필수, 웹에서 변경 가능) · `TZ`(기본 Asia/Seoul).
 
 ## 구조
 
 - `app/main.py` — 라우트(대시보드, 종목 CRUD/거래, 종목 상세, 시장, 로그인/비번, `/api/live` 폴링)
 - `app/prices.py` — 시세·환율·52주고·뉴스·기업지표·지수·장 세션. stale-while-revalidate 캐시(요청은 캐시 즉시 반환, 갱신은 백그라운드) + 시작 시 워밍.
 - `app/db.py` — SQLite(positions/settings/change_log/net_worth_history)
-- `app/sheets.py` — (선택) 구글 시트 비주식 자산 합산. 라벨 스캔이라 본인 시트 구조에 맞게 수정 필요.
 - `templates/` — Jinja2. `base.html`(헤더·테마·비공개), `dashboard.html`, `stock.html`, `market.html` 등
 - 데이터·비밀은 `data/`(SQLite, 서명키, 서비스계정키)에만. git에 안 올라감.
 
