@@ -6,8 +6,12 @@
   <form method="post" action="{{ ('/positions/' ~ pid) if pid else '/positions' }}">
     <div class="grid2">
       <div>
-        <label>계좌</label>
-        <input name="account" value="{{ p.account or '' }}" placeholder="종합매매 / ISA / 연금저축 / 금현물" required>
+        <label>계좌 <span class="muted">(기존 선택 또는 새로 입력)</span></label>
+        <input name="account" list="account-list" value="{{ p.account or '' }}"
+               placeholder="종합매매 / ISA / 연금저축 / 금현물" required>
+        <datalist id="account-list">
+          {% for a in accounts %}<option value="{{ a.name }}"></option>{% endfor %}
+        </datalist>
       </div>
       <div>
         <label>종목명</label>

@@ -1,21 +1,44 @@
 {% extends "base.html" %}
 {% block title %}종목 관리{% endblock %}
 {% block body %}
+<style>
+  .acct-actions { display:flex; gap:6px; align-items:center; }
+  .acct-actions .btn { padding:4px 9px; font-size:12px; }
+  .acct-empty { color:var(--muted); padding:10px 2px; font-size:13px; }
+  .flash { background:#fde8e8; color:#a11; border:1px solid #f5c2c2; border-radius:8px;
+           padding:10px 12px; margin-bottom:12px; font-size:14px; }
+  html[data-theme="dark"] .flash { background:#3a2020; color:#f3b0b0; border-color:#5a2f2f; }
+  .add-acct { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .add-acct input { max-width:220px; }
+  .name-cell .tk { color:var(--muted); font-size:12px; margin-left:4px; }
+</style>
+
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+
+{% for g in groups %}
 <div class="card">
   <div class="acc-head">
-    <span class="n">보유종목</span>
-    <a class="btn primary" href="/positions/new">+ 종목 추가</a>
+    <span class="n">{{ g.name }} <span class="muted" style="font-size:12px;">· {{ g.rows|length }}종목</span></span>
+    <span class="acct-actions">
+      <a class="btn primary" href="/positions/new?account={{ g.name | urlencode }}">+ 종목 추가</a>
+      <button class="btn" type="button" onclick="renameAcct('{{ g.name }}')">이름 변경</button>
+      <form class="inline" method="post" action="/accounts/delete"
+            onsubmit="return confirm('{{ g.name }} 계좌를 삭제할까요?');">
+        <input type="hidden" name="name" value="{{ g.name }}">
+        <button class="btn" type="submit">삭제</button>
+      </form>
+    </span>
   </div>
+  {% if g.rows %}
   <div class="tablewrap">
     <table>
       <thead>
-        <tr><th>계좌</th><th>종목</th><th>티커</th><th>구분</th><th>수량</th><th>평단</th><th></th></tr>
+        <tr><th>종목</th><th>티커</th><th>구분</th><th>수량</th><th>평단</th><th></th></tr>
       </thead>
       <tbody>
-      {% for r in rows %}
+      {% for r in g.rows %}
         <tr>
-          <td>{{ r.account }}</td>
-          <td>{{ r.name }}</td>
+          <td class="name-cell">{{ r.name }}</td>
           <td>{{ r.ticker or '-' }}</td>
           <td>{{ r.market }}</td>
           <td>{{ r.shares if r.shares is not none else '-' }}</td>
@@ -33,5 +56,34 @@
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="acct-empty">아직 종목이 없습니다. 「+ 종목 추가」로 넣어 주세요.</div>
+  {% endif %}
 </div>
+{% endfor %}
+
+<div class="card">
+  <div class="acc-head"><span class="n">계좌 추가</span></div>
+  <form class="add-acct" method="post" action="/accounts">
+    <input name="name" placeholder="예: 종합매매 / ISA / 연금저축 / 예적금" required>
+    <button class="btn primary" type="submit">계좌 만들기</button>
+  </form>
+  <p class="muted" style="margin-top:8px;">계좌는 종목을 묶는 그룹입니다. 증권 계좌뿐 아니라 예적금·금·차량 같은 자산 묶음으로도 쓸 수 있습니다.</p>
+</div>
+
+<form id="rename-form" method="post" action="/accounts/rename" style="display:none;">
+  <input type="hidden" name="old" id="rename-old">
+  <input type="hidden" name="new" id="rename-new">
+</form>
+<script>
+  function renameAcct(name) {
+    var next = prompt('계좌 새 이름', name);
+    if (next === null) return;
+    next = next.trim();
+    if (!next || next === name) return;
+    document.getElementById('rename-old').value = name;
+    document.getElementById('rename-new').value = next;
+    document.getElementById('rename-form').submit();
+  }
+</script>
 {% endblock %}

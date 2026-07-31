@@ -303,14 +303,49 @@ def dashboard(request: Request, user: str = Depends(require_login)):
 
 @app.get("/positions")
 def positions(request: Request, user: str = Depends(require_login)):
+    rows = db.all_positions()
+    accounts = db.list_accounts()
+    # group positions under their account (accounts with no holdings still show)
+    by_acc = {a["name"]: [] for a in accounts}
+    for r in rows:
+        by_acc.setdefault(r.get("account") or "", []).append(r)
+    groups = [{"name": a["name"], "rows": by_acc.get(a["name"], [])} for a in accounts]
+    flash = request.session.pop("flash", None)
     return templates.TemplateResponse(
-        "positions.html", {"request": request, "rows": db.all_positions()}
+        "positions.html",
+        {"request": request, "groups": groups, "accounts": accounts, "flash": flash},
     )
 
 
+@app.post("/accounts")
+def account_add(request: Request, user: str = Depends(require_login), name: str = Form(...)):
+    db.add_account(name)
+    return RedirectResponse("/positions", status_code=303)
+
+
+@app.post("/accounts/rename")
+def account_rename(request: Request, user: str = Depends(require_login),
+                   old: str = Form(...), new: str = Form(...)):
+    err = db.rename_account(old, new)
+    if err:
+        request.session["flash"] = err
+    return RedirectResponse("/positions", status_code=303)
+
+
+@app.post("/accounts/delete")
+def account_delete(request: Request, user: str = Depends(require_login), name: str = Form(...)):
+    err = db.delete_account(name)
+    if err:
+        request.session["flash"] = err
+    return RedirectResponse("/positions", status_code=303)
+
+
 @app.get("/positions/new")
-def new_form(request: Request, user: str = Depends(require_login)):
-    return templates.TemplateResponse("edit.html", {"request": request, "p": {}, "pid": None})
+def new_form(request: Request, user: str = Depends(require_login), account: str = ""):
+    return templates.TemplateResponse(
+        "edit.html",
+        {"request": request, "p": {"account": account}, "pid": None, "accounts": db.list_accounts()},
+    )
 
 
 @app.get("/positions/{pid}/edit")
@@ -318,7 +353,9 @@ def edit_form(request: Request, pid: int, user: str = Depends(require_login)):
     p = db.get_position(pid)
     if not p:
         raise HTTPException(404)
-    return templates.TemplateResponse("edit.html", {"request": request, "p": p, "pid": pid})
+    return templates.TemplateResponse(
+        "edit.html", {"request": request, "p": p, "pid": pid, "accounts": db.list_accounts()}
+    )
 
 
 @app.post("/positions")
