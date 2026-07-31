@@ -230,8 +230,12 @@ def dashboard(request: Request, user: str = Depends(require_login)):
     ]
 
     # --- chart data (rendered client-side by ApexCharts) ---
-    # 자산 구성 도넛 = category breakdown
-    alloc = [{"name": c["name"], "krw": c["krw"]} for c in cat_weights]
+    # 자산 구성 도넛 = per-account breakdown
+    alloc = [
+        {"name": a["account"], "krw": a["mkt_krw"]}
+        for a in data["accounts"] if a["mkt_krw"] > 0
+    ]
+    alloc.sort(key=lambda x: x["krw"], reverse=True)
     bar_items = [{"name": a["account"], "krw": a["mkt_krw"]} for a in data["accounts"]]
     bar_items.sort(key=lambda b: b["krw"], reverse=True)
 

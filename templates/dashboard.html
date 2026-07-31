@@ -126,7 +126,7 @@
 </div>
 
 <div class="card">
-  <div class="acc-head"><span class="n">자산 구성</span></div>
+  <div class="acc-head"><span class="n">자산 구성 <span class="muted" style="font-size:12px;">(계좌별)</span></span></div>
   <div id="chart-alloc" class="priv-notip"></div>
 </div>
 
@@ -227,15 +227,13 @@
                tooltip: { theme: dark ? 'dark' : 'light' } };
   function merge(a, b) { var o = {}; for (var k in a) o[k] = a[k]; for (var k in b) o[k] = b[k]; return o; }
 
-  // 1) 자산 구성 도넛 (색은 카테고리 고정 — 0 슬라이스가 걸러져도 안 밀림)
-  var CATCOL = { '미국주식': PAL[0], '예적금': PAL[1], 'LY 스옵': PAL[2], '차량': PAL[3],
-                 'ISA': PAL[4], '국내주식': PAL[5], '금': PAL[6], '기타': PAL[7] };
+  // 1) 자산 구성 도넛 (계좌별, 팔레트 순환 색)
   if (D.alloc && D.alloc.length) {
     new ApexCharts(document.getElementById('chart-alloc'), merge(base, {
       chart: merge(base.chart, { type: 'donut', height: 300 }),
       series: D.alloc.map(function (a) { return a.krw; }),
       labels: D.alloc.map(function (a) { return a.name; }),
-      colors: D.alloc.map(function (a) { return CATCOL[a.name] || '#8a8a8a'; }),
+      colors: D.alloc.map(function (a, i) { return PAL[i % PAL.length]; }),
       legend: { position: 'bottom' },
       dataLabels: { formatter: function (v) { return v.toFixed(1) + '%'; } },
       plotOptions: { pie: { donut: { size: '62%', labels: { show: true,
