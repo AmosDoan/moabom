@@ -46,8 +46,8 @@
         <input name="manual_value_krw" value="{{ p.manual_value_krw if p.manual_value_krw is not none else '' }}">
       </div>
       <div>
-        <label>취득원가(원) <span class="muted">(외화 종목 정확한 손익용, 선택)</span></label>
-        <input name="cost_krw" value="{{ p.cost_krw if p.cost_krw is not none else '' }}" placeholder="예: 23814488">
+        <label>원화 취득원가 <span class="muted">(외화 종목, 선택 · 증권사 「평가금액 − 손익」)</span></label>
+        <input name="cost_krw" value="{{ p.cost_krw if p.cost_krw is not none else '' }}" placeholder="예: 34794640">
       </div>
     </div>
     <p class="muted" style="margin-top:14px;">
