@@ -14,7 +14,8 @@ import threading
 import time
 
 KEY_PATH = os.environ.get("GOOGLE_SA_KEY", os.path.join(os.path.dirname(__file__), "..", "data", "gsa.json"))
-SHEET_ID = os.environ.get("ASSET_SHEET_ID", "")
+SHEET_ID = os.environ.get("ASSET_SHEET_ID", "")            # (선택) 대시보드 읽기 연동
+BACKUP_SHEET_ID = os.environ.get("ASSET_BACKUP_SHEET_ID", "")  # (선택) Stock 탭 백업 쓰기
 
 # label in sheet column A -> display name on dashboard
 WANTED = {
@@ -196,3 +197,27 @@ def get_nonstock() -> dict | None:
     result = {"assets": assets, "total_krw": sum(a["krw"] for a in assets)}
     _CACHE["nonstock"] = (now, result)
     return result
+
+
+# --- (선택) 개인 백업: 매일 주식 평가액을 구글시트 "Stock" 탭에 기록 ---
+def backup_available() -> bool:
+    return bool(BACKUP_SHEET_ID) and os.path.exists(KEY_PATH)
+
+
+def backup_stock(day: str, manwon: int) -> bool:
+    """'Stock' 탭에 [날짜, 평가액(만원)] 기록. 당일 행 있으면 갱신, 없으면 추가.
+    서비스 계정에 편집자 권한이 필요합니다(뷰어면 실패). 성공 시 True."""
+    if not backup_available():
+        return False
+    try:
+        import gspread
+        gc = gspread.service_account(filename=KEY_PATH)
+        ws = gc.open_by_key(BACKUP_SHEET_ID).worksheet("Stock")
+        col_a = ws.col_values(1)
+        if col_a and col_a[-1].strip() == day:
+            ws.update_cell(len(col_a), 2, manwon)
+        else:
+            ws.append_row([day, manwon], value_input_option="USER_ENTERED")
+        return True
+    except Exception:
+        return False

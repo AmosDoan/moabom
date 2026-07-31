@@ -190,6 +190,30 @@ def _warm_all():
 _threading.Thread(target=_warm_all, daemon=True).start()
 
 
+def _daily_backup_loop():
+    """(선택) 매일 종합매매 주식 평가액(만원)을 구글시트 'Stock' 탭에 백업.
+    ASSET_BACKUP_SHEET_ID + 서비스계정 편집자 권한이 있어야 동작."""
+    import time as _t
+    while True:
+        try:
+            if sheets.backup_available():
+                data = prices.enrich(db.all_positions())
+                val = sum(
+                    r["mkt_krw"] for r in data["rows"]
+                    if (r.get("account") or "") == "종합매매"
+                    and str(r.get("market") or "").upper() in ("US", "KR", "JP")
+                    and r.get("ticker")
+                )
+                sheets.backup_stock(datetime.now().strftime("%Y.%m.%d"), round(val / 10000))
+        except Exception:
+            pass
+        _t.sleep(6 * 3600)  # 6시간마다 (당일 행 갱신)
+
+
+if sheets.backup_available():
+    _threading.Thread(target=_daily_backup_loop, daemon=True).start()
+
+
 def _account_view(accounts):
     """Each account gets sub-groups. 종합매매 splits into 국내주식/해외주식 within ONE card."""
     def grp(label, rows_):
